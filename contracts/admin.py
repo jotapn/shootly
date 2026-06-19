@@ -1,3 +1,9 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Contrato
+
+
+@admin.register(Contrato)
+class ContratoAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "status", "assinatura_data")
+    readonly_fields = ("hash_documento", "assinatura_ip", "assinatura_data")
