@@ -1,6 +1,10 @@
+import logging
+
 from django.conf import settings
 from django.template import loader
 from django.utils.html import strip_tags
+
+logger = logging.getLogger(__name__)
 
 
 def send_mail_sendpulse(subject, email_template_name, context, email_to, name_to=""):
@@ -23,9 +27,27 @@ def send_mail_sendpulse(subject, email_template_name, context, email_to, name_to
         "subject": subject,
         "html": html_content,
         "text": text_content,
-        "from": {"name": "Pythonando", "email": settings.DEFAULT_FROM_EMAIL},
+        "from": {"name": settings.SENDPULSE_FROM_NAME, "email": settings.DEFAULT_FROM_EMAIL},
         "to": [{"name": name_to, "email": email_to}],
     }
 
-    sp_api_proxy.smtp_send_mail(email)
+    response = sp_api_proxy.smtp_send_mail(email)
+    error = response.get("data") if isinstance(response, dict) else None
+
+    if (
+        isinstance(response, dict)
+        and (response.get("is_error") or response.get("result") is False)
+    ):
+        raise RuntimeError(f"SendPulse rejected the email: {response}")
+
+    if isinstance(error, dict) and error.get("is_error"):
+        message = error.get("message") or response
+        raise RuntimeError(f"SendPulse rejected the email: {message}")
+
+    logger.info(
+        "SendPulse email accepted for delivery to %s with id %s",
+        email_to,
+        response.get("id") if isinstance(response, dict) else None,
+    )
+    return response
 

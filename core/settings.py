@@ -1,7 +1,6 @@
 """Base settings for a SaaS-ready Django project."""
 
 import importlib.util
-import os
 from pathlib import Path
 from decouple import config
 
@@ -14,7 +13,7 @@ LOG_DIR.mkdir(exist_ok=True)
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 SECRET_KEY = 'django-insecure-069=w%%ihcq28f8t5rr)!w2b9l1j+lbj@d$u5ns7lt3d7t##x0'
-DEBUG = config('DEBUG', cast=bool)
+DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ['https://*.railway.app']
 
@@ -161,9 +160,10 @@ INTERNAL_IPS = ["127.0.0.1"]
 
 CLIENT_ID_SENDPULSE = config("CLIENT_ID_SENDPULSE", default="")
 CLIENT_SECRET_SENDPULSE = config("CLIENT_SECRET_SENDPULSE", default="")
+SENDPULSE_FROM_NAME = config("SENDPULSE_FROM_NAME", default="Shootly")
 ZOUTI_WEBHOOK_SECRET = config("ZOUTI_WEBHOOK_SECRET", default="")
-EMAIL_BACKEND = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "caio@pythonando.com.br")
+EMAIL_BACKEND = config("DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="caio@pythonando.com.br")
 
 LOGGING = {
     "version": 1,
