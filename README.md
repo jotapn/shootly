@@ -44,6 +44,7 @@ DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 # E-mail
 DJANGO_EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 DEFAULT_FROM_EMAIL=caio@pythonando.com.br
+SENDPULSE_FROM_NAME=Shootly
 
 # SendPulse (necessario se for enviar e-mail real via API SendPulse)
 CLIENT_ID_SENDPULSE=

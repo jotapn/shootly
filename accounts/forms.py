@@ -51,7 +51,7 @@ class SendPulsePasswordResetForm(PasswordResetForm):
         html_email_template_name=None,
     ):
         task_send_mail_sendpulse(
-            "Recuperacao de senha | Pythonando",
+            "Recuperacao de senha | Shootly",
             "email/reset_password.html",
             email_to=to_email,
             email=context["email"],
