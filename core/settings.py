@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'clients',
     'orcamentos',
     'jobs',
+    'deliveries',
 ]
 
 HAS_WHITENOISE = importlib.util.find_spec("whitenoise") is not None
