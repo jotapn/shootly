@@ -1,0 +1,91 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Contrato — {{ job.titulo|default:"Job" }}{% endblock %}
+{% block page_title %}Contrato{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center gap-3 mb-6">
+    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium
+        {% if contrato.status == 'PENDENTE' %}bg-amber-100 text-amber-800
+        {% else %}bg-green-100 text-green-800{% endif %}">
+        {{ contrato.get_status_display }}
+    </span>
+    <a href="{% url 'jobs:detail' job.pk %}"
+       class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        ← Job
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Sidebar com info -->
+    <div class="space-y-4">
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Informações</h2>
+            <dl class="space-y-3 text-sm">
+                <div>
+                    <dt class="text-xs text-slate-400">Job</dt>
+                    <dd class="font-medium text-slate-900">{{ job.titulo|default:"Job sem título" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-slate-400">Cliente</dt>
+                    <dd class="text-slate-700">{{ job.cliente.nome }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-slate-400">Gerado em</dt>
+                    <dd class="text-slate-700">{{ contrato.created_at|date:"d/m/Y H:i" }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        {% if contrato.status == 'PENDENTE' %}
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Link do cliente</h2>
+            <p class="text-xs text-slate-500 mb-2">Envie este link para o cliente assinar:</p>
+            <div class="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                <span class="font-mono text-xs text-slate-700 break-all">
+                    {{ request.scheme }}://{{ request.get_host }}{% url 'contracts:public_view' contrato.link_token %}
+                </span>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if contrato.status == 'ASSINADO' %}
+        <div class="rounded-xl border border-green-200 bg-green-50 p-6 shadow-sm">
+            <h2 class="text-sm font-semibold text-green-700 uppercase tracking-wide mb-3">Assinado por</h2>
+            <dl class="space-y-2 text-sm">
+                <div>
+                    <dt class="text-xs text-green-600">Nome</dt>
+                    <dd class="font-medium text-green-900">{{ contrato.assinatura_nome }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-green-600">CPF</dt>
+                    <dd class="text-green-800">{{ contrato.assinatura_cpf }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-green-600">Data</dt>
+                    <dd class="text-green-800">{{ contrato.assinatura_data|date:"d/m/Y H:i" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-green-600">IP</dt>
+                    <dd class="text-green-800 font-mono text-xs">{{ contrato.assinatura_ip }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-green-600">Hash SHA-256</dt>
+                    <dd class="text-green-800 font-mono text-xs break-all">{{ contrato.hash_documento }}</dd>
+                </div>
+            </dl>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Conteúdo do contrato -->
+    <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-200">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Conteúdo</h2>
+        </div>
+        <div class="p-6">
+            <pre class="whitespace-pre-wrap font-mono text-xs text-slate-700 leading-relaxed">{{ contrato.conteudo }}</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

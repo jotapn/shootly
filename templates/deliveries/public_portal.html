@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Entrega</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 p-6 flex items-center justify-center">
+<div class="mx-auto max-w-md text-center">
+    <div class="rounded-xl border border-slate-200 bg-white p-10 shadow-sm">
+        {% if portal.status == 'LIBERADO' %}
+        <div class="flex justify-center mb-4">
+            <div class="rounded-full bg-green-100 p-4">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900 mb-2">Entrega liberada!</h1>
+        <p class="text-slate-500 text-sm">Seu pagamento foi confirmado. As fotos estão disponíveis.</p>
+        <p class="text-slate-400 text-xs mt-4">Portal completo disponível na Fase 5.</p>
+        {% else %}
+        <div class="flex justify-center mb-4">
+            <div class="rounded-full bg-amber-100 p-4">
+                <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900 mb-2">Entrega bloqueada</h1>
+        <p class="text-slate-500 text-sm">O acesso às fotos será liberado após a confirmação do pagamento.</p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

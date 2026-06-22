@@ -1,12 +1,13 @@
 from django.urls import path
-from django.views.generic import TemplateView
+
+from . import views
 
 app_name = "clients"
 
 urlpatterns = [
-    path("clientes/", TemplateView.as_view(template_name="placeholder.html"), name="list"),
-    path("clientes/novo/", TemplateView.as_view(template_name="placeholder.html"), name="create"),
-    path("clientes/<int:pk>/", TemplateView.as_view(template_name="placeholder.html"), name="detail"),
-    path("clientes/<int:pk>/editar/", TemplateView.as_view(template_name="placeholder.html"), name="edit"),
-    path("clientes/<int:pk>/excluir/", TemplateView.as_view(template_name="placeholder.html"), name="delete"),
+    path("clientes/", views.ClienteListView.as_view(), name="list"),
+    path("clientes/novo/", views.ClienteCreateView.as_view(), name="create"),
+    path("clientes/<int:pk>/", views.ClienteDetailView.as_view(), name="detail"),
+    path("clientes/<int:pk>/editar/", views.ClienteUpdateView.as_view(), name="edit"),
+    path("clientes/<int:pk>/excluir/", views.ClienteDeleteView.as_view(), name="delete"),
 ]

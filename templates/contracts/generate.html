@@ -1,0 +1,35 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Gerar Contrato{% endblock %}
+{% block page_title %}Gerar Contrato — {{ job.titulo|default:"Job" }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <p class="text-sm text-slate-500">
+        O texto abaixo foi gerado automaticamente. Você pode editá-lo antes de salvar.
+        Após salvo, o link de assinatura estará disponível para enviar ao cliente.
+    </p>
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm mb-4">
+        {{ form.conteudo }}
+        {% if form.conteudo.errors %}
+            {% for error in form.conteudo.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="flex items-center gap-3">
+        <button type="submit"
+                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+            Salvar contrato
+        </button>
+        <a href="{% url 'jobs:detail' job.pk %}"
+           class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+        </a>
+    </div>
+</form>
+{% endblock %}

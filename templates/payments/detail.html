@@ -1,0 +1,102 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Pagamento — {{ job.titulo|default:"Job" }}{% endblock %}
+{% block page_title %}Pagamento{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center gap-3 mb-6">
+    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium
+        {% if pagamento.status == 'PENDENTE' %}bg-amber-100 text-amber-800
+        {% else %}bg-green-100 text-green-800{% endif %}">
+        {{ pagamento.get_status_display }}
+    </span>
+    <a href="{% url 'jobs:detail' job.pk %}"
+       class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        ← Job
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Dados do pagamento -->
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Informações</h2>
+        <dl class="space-y-3 text-sm">
+            <div>
+                <dt class="text-xs text-slate-400">Job</dt>
+                <dd class="font-medium text-slate-900">{{ job.titulo|default:"Job sem título" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Cliente</dt>
+                <dd class="text-slate-700">{{ job.cliente.nome }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Valor</dt>
+                <dd class="text-lg font-bold text-slate-900">R$ {{ pagamento.valor|floatformat:2 }}</dd>
+            </div>
+            {% if pagamento.metodo %}
+            <div>
+                <dt class="text-xs text-slate-400">Método</dt>
+                <dd class="text-slate-700">{{ pagamento.get_metodo_display }}</dd>
+            </div>
+            {% endif %}
+            {% if pagamento.status == 'CONFIRMADO' %}
+            <div>
+                <dt class="text-xs text-slate-400">Confirmado em</dt>
+                <dd class="text-slate-700">{{ pagamento.confirmado_em|date:"d/m/Y H:i" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Confirmado por</dt>
+                <dd class="text-slate-700">{{ pagamento.get_confirmado_por_display }}</dd>
+            </div>
+            {% if pagamento.provider_payment_id %}
+            <div>
+                <dt class="text-xs text-slate-400">ID externo</dt>
+                <dd class="font-mono text-xs text-slate-600">{{ pagamento.provider_payment_id }}</dd>
+            </div>
+            {% endif %}
+            {% endif %}
+        </dl>
+    </div>
+
+    <!-- Ação de confirmação -->
+    {% if form %}
+    <div id="payment-status-section" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Confirmar recebimento</h2>
+        <form method="post" action="{% url 'payments:confirm_manual' job.pk %}" novalidate>
+            {% csrf_token %}
+            <div class="space-y-4">
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                        {% for error in field.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit"
+                    class="mt-6 w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700 transition-colors">
+                Confirmar pagamento recebido
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="rounded-xl border border-green-200 bg-green-50 p-6 shadow-sm flex items-center gap-4">
+        <div class="flex-shrink-0 rounded-full bg-green-100 p-3">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <div>
+            <p class="text-sm font-semibold text-green-800">Pagamento confirmado</p>
+            <p class="text-xs text-green-600 mt-0.5">Portal de entrega liberado para o cliente.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
