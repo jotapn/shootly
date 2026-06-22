@@ -6,6 +6,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("auth/", include("accounts.urls")),
     path("webhooks/", include("plans.urls")),
+    path("", include("clients.urls")),
+    path("", include("orcamentos.urls")),
+    path("", include("jobs.urls")),
+    path("", include("contracts.urls")),
+    path("", include("deliveries.urls")),
+    path("", include("payments.urls")),
 
 ]
 
