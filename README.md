@@ -3,7 +3,7 @@
 Projeto Django com:
 - autenticacao por e-mail (cadastro, login, logout, reset de senha),
 - controle de plano por usuario,
-- webhook de pagamentos (Zouti),
+- webhook de pagamentos (Asaas),
 - dashboard administrativa com metricas SaaS (MRR, churn, conversao, etc.).
 
 ## Requisitos
@@ -51,7 +51,7 @@ CLIENT_ID_SENDPULSE=
 CLIENT_SECRET_SENDPULSE=
 
 # Webhook de pagamento (opcional, mas recomendado em producao)
-ZOUTI_WEBHOOK_SECRET=
+ASAAS_WEBHOOK_SECRET=
 ```
 
 ### O que e obrigatorio?
@@ -59,7 +59,7 @@ ZOUTI_WEBHOOK_SECRET=
 - Para subir o projeto local: nenhuma variavel e estritamente obrigatoria (existem defaults).
 - Para ambiente real: defina ao menos `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=False` e `DJANGO_ALLOWED_HOSTS`.
 - Para envio real de e-mail via SendPulse: `CLIENT_ID_SENDPULSE` e `CLIENT_SECRET_SENDPULSE`.
-- Para validar webhook com seguranca: `ZOUTI_WEBHOOK_SECRET`.
+- Para validar webhook com seguranca: `ASAAS_WEBHOOK_SECRET`.
 
 ## 3) Banco e migracoes
 
@@ -95,19 +95,18 @@ Passos:
 
 Sem esse valor, o MRR fica `0.00`.
 
-## 7) Webhook de pagamentos (Zouti)
+## 7) Webhook de pagamentos (Asaas)
 
 Endpoint:
 
-`POST /webhooks/zouti/`
+`POST /webhooks/asaas/`
 
 Comportamento atual:
-- identifica `customer.email` e `items[0].product_offer_id`,
-- cria/atualiza usuario,
-- cria/atualiza `UserPlan` (`ACTIVE` quando status do payload for `PAID`, senao `CANCELLED`),
-- opcionalmente envia e-mail de boas-vindas para novo usuario ativo.
+- endpoint reservado para receber notificacoes externas do Asaas,
+- a rota ja esta registrada como `payments:webhook_asaas`,
+- a validacao de assinatura e o processamento do payload serao implementados na fase de integracao do gateway.
 
-Se `ZOUTI_WEBHOOK_SECRET` estiver configurado, o header `X-Zouti-Secret` precisa bater com esse valor.
+Quando `ASAAS_WEBHOOK_SECRET` estiver configurado, a validacao devera comparar o header de assinatura enviado pelo Asaas com esse segredo.
 
 ## 8) Comandos uteis
 
