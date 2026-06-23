@@ -74,12 +74,16 @@ Prefixo `/p/` na URL os separa visualmente do painel autenticado.
 | Models + migrations (6 apps) | ✅ concluído |
 | Testes da camada de dados | ✅ concluído |
 | Estrutura de URLs | ✅ concluído |
-| Views — painel do fotógrafo | 🔵 próximo |
-| Views — portais públicos | ⬜ aguardando |
-| Templates base + HTMX | ⬜ aguardando |
-| Galeria de seleção (Alpine.js) | ⬜ aguardando |
-| Integração Asaas | ⬜ aguardando |
-| Onboarding do fotógrafo | ⬜ aguardando |
+| Views — painel do fotógrafo (Fase 4) | ✅ concluído |
+| Perfil da empresa + modelos de contrato (Fase 5a/5b) | 🔵 próximo |
+| Marca d'água — config + aplicação Pillow (Fase 5c) | 🔵 próximo |
+| Portal de seleção do cliente — Alpine.js (Fase 5d) | 🔵 próximo |
+| Portal de entrega do cliente (Fase 5e) | 🔵 próximo |
+| Lista de contratos no painel (Fase 5f) | 🔵 próximo |
+| Integração Asaas — pagamento real (Fase 6) | ⬜ aguardando |
+| Templates visuais orçamento/contrato (Fase 7) | ⬜ aguardando |
+| Contratos recorrentes (Fase 8) | ⬜ aguardando |
+| CRM + precificação + multi-usuário (Fase 9) | ⬜ aguardando |
 | E-mails e notificações | ⬜ aguardando |
 | Segurança e hardening | ⬜ aguardando |
 | Deploy e produção | ⬜ aguardando |
@@ -172,6 +176,15 @@ ORCAMENTO_APROVADO
 /jobs/<pk>/pagamento/               payments:detail
 /jobs/<pk>/pagamento/criar/         payments:create
 /jobs/<pk>/pagamento/confirmar/     payments:confirm_manual
+/jobs/<pk>/status/                  jobs:status_update
+/fotos/<foto_pk>/delete/            deliveries:foto_delete
+/contratos/                         contracts:list
+/configuracoes/perfil/              accounts:perfil
+/configuracoes/marca-dagua/         accounts:marca_dagua
+/configuracoes/modelos-contrato/              contracts:modelo_list
+/configuracoes/modelos-contrato/novo/         contracts:modelo_create
+/configuracoes/modelos-contrato/<pk>/editar/  contracts:modelo_edit
+/configuracoes/modelos-contrato/<pk>/excluir/ contracts:modelo_delete
 ```
 
 ### Portais públicos (sem login, via UUID token)
