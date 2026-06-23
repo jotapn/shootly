@@ -10,6 +10,8 @@ urlpatterns = [
     path("fotos/<int:foto_pk>/delete/", views.foto_delete_view, name="foto_delete"),
     path("jobs/<int:job_pk>/selecao/criar/", views.selecao_create_view, name="selecao_create"),
     path("jobs/<int:job_pk>/entrega/criar/", views.portal_create_view, name="portal_create"),
+    path("jobs/<int:job_pk>/entrega/liberar/", views.portal_liberar_view, name="portal_liberar"),
     path("p/selecao/<uuid:token>/", views.public_selecao_view, name="public_selecao"),
+    path("p/selecao/<uuid:token>/confirmar/", views.public_selecao_confirm_view, name="public_selecao_confirm"),
     path("p/entrega/<uuid:token>/", views.public_portal_view, name="public_portal"),
 ]

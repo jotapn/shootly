@@ -1,0 +1,51 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Contratos{% endblock %}
+{% block page_title %}Contratos{% endblock %}
+
+{% block content %}
+{% if contratos %}
+<div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+                <th class="text-left px-6 py-3 font-medium text-slate-500">Cliente</th>
+                <th class="text-left px-6 py-3 font-medium text-slate-500">Job</th>
+                <th class="text-left px-6 py-3 font-medium text-slate-500">Status</th>
+                <th class="text-left px-6 py-3 font-medium text-slate-500">Data</th>
+                <th class="px-6 py-3"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for contrato in contratos %}
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-6 py-3 font-medium text-slate-900">{{ contrato.job.cliente.nome }}</td>
+                <td class="px-6 py-3 text-slate-600">{{ contrato.job.titulo|default:"(sem título)" }}</td>
+                <td class="px-6 py-3">
+                    {% if contrato.status == "ASSINADO" %}
+                    <span class="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Assinado</span>
+                    {% else %}
+                    <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Pendente</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-3 text-slate-500">{{ contrato.created_at|date:"d/m/Y" }}</td>
+                <td class="px-6 py-3 text-right">
+                    <a href="{% url 'contracts:detail' contrato.job_id %}"
+                       class="text-blue-600 hover:underline text-xs font-medium">Ver →</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white py-16 text-center">
+    <svg class="w-12 h-12 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    </svg>
+    <p class="text-slate-500 font-medium">Nenhum contrato ainda</p>
+    <p class="text-sm text-slate-400 mt-1">Contratos são gerados a partir dos jobs.</p>
+</div>
+{% endif %}
+{% endblock %}

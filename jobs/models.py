@@ -80,6 +80,7 @@ class ArquivoFoto(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
     arquivo = models.FileField(upload_to=arquivo_foto_upload_path)
     thumbnail = models.ImageField(upload_to=arquivo_foto_upload_path, blank=True, null=True)
+    arquivo_protegido = models.ImageField(upload_to=arquivo_foto_upload_path, blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

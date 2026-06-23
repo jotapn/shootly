@@ -12,8 +12,10 @@ from django.utils import timezone
 
 from plans.models import UserPlan
 
-from .forms import LoginForm, RegisterForm
-from .models import User
+from deliveries.models import ConfiguracaoMarcaDagua
+
+from .forms import LoginForm, MarcaDaguaForm, PerfilFotografoForm, RegisterForm
+from .models import PerfilFotografo, User
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -222,4 +224,32 @@ def logout_view(request):
         logout(request)
         messages.info(request, "Voce saiu da sua conta.")
     return redirect("accounts:login")
+
+
+@login_required
+def perfil_view(request):
+    perfil, _ = PerfilFotografo.objects.get_or_create(fotografo=request.user)
+    form = PerfilFotografoForm(request.POST or None, request.FILES or None, instance=perfil)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Perfil atualizado com sucesso.")
+        return redirect("accounts:perfil")
+    return render(request, "accounts/perfil.html", {"form": form, "perfil": perfil})
+
+
+@login_required
+def marca_dagua_view(request):
+    config = getattr(request.user, "marca_dagua", None)
+    form = MarcaDaguaForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=config,
+    )
+    if request.method == "POST" and form.is_valid():
+        obj = form.save(commit=False)
+        obj.fotografo = request.user
+        obj.save()
+        messages.success(request, "Configuração de marca d'água salva.")
+        return redirect("accounts:marca_dagua")
+    return render(request, "accounts/marca_dagua.html", {"form": form, "config": config})
 

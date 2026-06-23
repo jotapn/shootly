@@ -7,7 +7,9 @@ from .views import (
     dashboard_view,
     login_view,
     logout_view,
+    marca_dagua_view,
     payments_settings_view,
+    perfil_view,
     register_view,
 )
 
@@ -20,6 +22,8 @@ urlpatterns = [
     path("admin/dashboard/", admin_dashboard_view, name="admin_dashboard"),
     path("planos/", payments_settings_view, name="payments_settings"),
     path("logout/", logout_view, name="logout"),
+    path("configuracoes/perfil/", perfil_view, name="perfil"),
+    path("configuracoes/marca-dagua/", marca_dagua_view, name="marca_dagua"),
     path(
         "senha/recuperar/",
         auth_views.PasswordResetView.as_view(

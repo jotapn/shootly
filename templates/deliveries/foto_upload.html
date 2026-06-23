@@ -26,7 +26,7 @@
                     </label>
                     {{ form.arquivos }}
                     <p class="mt-1 text-xs text-slate-400">
-                        Formatos aceitos: JPG, PNG, TIF, RAW, CR2, NEF, ARW, DNG. Máximo {{ form.arquivos.field|default:"50" }} MB por arquivo.
+                        Formatos aceitos: JPG, PNG, TIF, WEBP — RAW: CR2, CR3, NEF, NRW, ARW, RAF, ORF, RW2, PEF, DNG e outros. Máximo 50 MB por arquivo.
                     </p>
                     {% if form.arquivos.errors %}
                         {% for error in form.arquivos.errors %}

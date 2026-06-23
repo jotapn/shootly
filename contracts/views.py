@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
@@ -5,8 +7,8 @@ from django.utils import timezone
 
 from jobs.models import Job
 
-from .forms import AssinaturaForm, ContratoForm
-from .models import Contrato
+from .forms import AssinaturaForm, ContratoForm, ModeloContratoForm
+from .models import Contrato, ModeloContrato
 
 
 @login_required
@@ -17,6 +19,11 @@ def contrato_generate_view(request, job_pk):
     if job.status not in (Job.STATUS_CONTRATO_PENDENTE, Job.STATUS_ORCAMENTO_APROVADO):
         messages.error(request, "Este job não permite gerar contrato neste momento.")
         return redirect("jobs:detail", pk=job.pk)
+
+    modelos = ModeloContrato.objects.filter(fotografo=request.user)
+    variaveis_job = _build_variaveis_job(job)
+    modelos_json = json.dumps({str(m.pk): m.conteudo_template for m in modelos})
+    variaveis_json = json.dumps(variaveis_job)
 
     if request.method == "POST":
         form = ContratoForm(request.POST)
@@ -32,7 +39,13 @@ def contrato_generate_view(request, job_pk):
     else:
         form = ContratoForm(initial={"conteudo": _build_contrato_conteudo(job)})
 
-    return render(request, "contracts/generate.html", {"form": form, "job": job})
+    return render(request, "contracts/generate.html", {
+        "form": form,
+        "job": job,
+        "modelos": modelos,
+        "modelos_json": modelos_json,
+        "variaveis_json": variaveis_json,
+    })
 
 
 @login_required
@@ -67,6 +80,73 @@ def contrato_public_sign_view(request, token):
         )
         return render(request, "contracts/public_signed.html", {"contrato": contrato})
     return render(request, "contracts/public_view.html", {"contrato": contrato, "form": form})
+
+
+@login_required
+def contrato_list_view(request):
+    contratos = (
+        Contrato.objects.filter(job__fotografo=request.user)
+        .select_related("job", "job__cliente")
+        .order_by("-created_at")
+    )
+    return render(request, "contracts/list.html", {"contratos": contratos})
+
+
+@login_required
+def modelo_list_view(request):
+    modelos = ModeloContrato.objects.filter(fotografo=request.user)
+    return render(request, "contracts/modelo_list.html", {"modelos": modelos})
+
+
+@login_required
+def modelo_create_view(request):
+    form = ModeloContratoForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        modelo = form.save(commit=False)
+        modelo.fotografo = request.user
+        modelo.save()
+        messages.success(request, "Modelo criado com sucesso.")
+        return redirect("contracts:modelo_list")
+    return render(request, "contracts/modelo_form.html", {"form": form, "acao": "Novo"})
+
+
+@login_required
+def modelo_update_view(request, pk):
+    modelo = get_object_or_404(ModeloContrato, pk=pk, fotografo=request.user)
+    form = ModeloContratoForm(request.POST or None, instance=modelo)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Modelo atualizado.")
+        return redirect("contracts:modelo_list")
+    return render(request, "contracts/modelo_form.html", {"form": form, "acao": "Editar", "modelo": modelo})
+
+
+@login_required
+def modelo_delete_view(request, pk):
+    modelo = get_object_or_404(ModeloContrato, pk=pk, fotografo=request.user)
+    if request.method == "POST":
+        modelo.delete()
+        messages.success(request, "Modelo excluído.")
+        return redirect("contracts:modelo_list")
+    return render(request, "contracts/modelo_confirm_delete.html", {"modelo": modelo})
+
+
+def _build_variaveis_job(job):
+    perfil = getattr(job.fotografo, "perfil", None)
+    itens = job.orcamento.itens.select_related("servico").all()
+    servicos_str = "\n".join([
+        f"  • {i.descricao or (i.servico.nome if i.servico else '')}: R$ {i.valor:.2f}"
+        for i in itens
+    ])
+    return {
+        "{{nome_cliente}}": job.cliente.nome,
+        "{{empresa_cliente}}": job.cliente.empresa or "",
+        "{{valor_total}}": f"R$ {job.valor_total:.2f}",
+        "{{data_hoje}}": timezone.localdate().strftime("%d/%m/%Y"),
+        "{{servicos}}": servicos_str,
+        "{{nome_fotografo}}": job.fotografo.email,
+        "{{nome_empresa}}": perfil.nome_empresa if perfil else "",
+    }
 
 
 def _build_contrato_conteudo(job):

@@ -55,7 +55,7 @@
         <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Próximas ações</h2>
         <div class="space-y-3">
 
-            <!-- Contrato -->
+            <!-- 1. Contrato -->
             <div class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center
@@ -89,7 +89,7 @@
                 {% endif %}
             </div>
 
-            <!-- Fotos -->
+            <!-- 2. Fotos brutas -->
             <div class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
@@ -100,11 +100,11 @@
                 {% if job.status == "ORCAMENTO_APROVADO" or job.status == "CONTRATO_PENDENTE" %}
                 <span class="text-xs text-slate-400">Disponível após contrato assinado</span>
                 {% else %}
-                <a href="{% url 'deliveries:foto_list' job.pk %}" class="text-xs text-blue-600 hover:underline">Ver fotos →</a>
+                <a href="{% url 'deliveries:foto_list' job.pk %}" class="text-xs text-blue-600 hover:underline">Gerenciar fotos →</a>
                 {% endif %}
             </div>
 
-            <!-- Seleção -->
+            <!-- 3. Seleção pelo cliente -->
             <div class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center
@@ -126,6 +126,15 @@
                     <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_selecao' job.selecao.link_token %}"
                        target="_blank"
                        class="text-xs text-blue-600 hover:underline">Link do cliente →</a>
+                    {% elif job.selecao.status == "CONCLUIDA" %}
+                    <form method="post" action="{% url 'jobs:status_update' job.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="EM_EDICAO">
+                        <button type="submit"
+                                class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors">
+                            Iniciar edição →
+                        </button>
+                    </form>
                     {% endif %}
                 </div>
                 {% elif job.status == "EM_PRODUCAO" %}
@@ -141,7 +150,62 @@
                 {% endif %}
             </div>
 
-            <!-- Pagamento -->
+            <!-- 4. Portal de entrega -->
+            <div class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center
+                        {% if portal and portal.status == 'LIBERADO' %}bg-green-100 text-green-600
+                        {% elif tem_portal %}bg-yellow-100 text-yellow-600
+                        {% else %}bg-slate-100 text-slate-400{% endif %}">
+                        {% if portal and portal.status == 'LIBERADO' %}
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        {% else %}
+                        <span class="text-xs font-bold">4</span>
+                        {% endif %}
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">Portal de entrega</span>
+                </div>
+
+                {% if portal and portal.status == 'LIBERADO' %}
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-xs font-medium text-green-600">Liberado ✓</span>
+                    <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}"
+                       target="_blank"
+                       class="text-xs text-blue-600 hover:underline">Link do cliente →</a>
+                </div>
+
+                {% elif portal and portal.status == 'BLOQUEADO' %}
+                <div class="flex flex-col items-end gap-1">
+                    <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}"
+                       target="_blank"
+                       class="text-xs text-slate-500 hover:underline">Link do portal →</a>
+                    <form method="post" action="{% url 'deliveries:portal_liberar' job.pk %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                                onclick="return confirm('Liberar o portal de entrega? O cliente poderá baixar as fotos.')"
+                                class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors">
+                            Liberar para o cliente
+                        </button>
+                    </form>
+                </div>
+
+                {% elif job.status == 'EM_EDICAO' %}
+                <form method="post" action="{% url 'deliveries:portal_create' job.pk %}">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors">
+                        Criar portal de entrega
+                    </button>
+                </form>
+
+                {% else %}
+                <span class="text-xs text-slate-400">Disponível após edição concluída</span>
+                {% endif %}
+            </div>
+
+            <!-- 5. Pagamento -->
             <div class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center
@@ -151,7 +215,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                         {% else %}
-                        <span class="text-xs font-bold">4</span>
+                        <span class="text-xs font-bold">5</span>
                         {% endif %}
                     </div>
                     <span class="text-sm font-medium text-slate-700">Pagamento</span>
@@ -164,9 +228,29 @@
                     Registrar pagamento
                 </a>
                 {% else %}
-                <span class="text-xs text-slate-400">Disponível após entrega</span>
+                <span class="text-xs text-slate-400">Disponível após criar portal</span>
                 {% endif %}
             </div>
+
+            <!-- 6. Concluir job -->
+            {% if job.status == 'ENTREGUE' %}
+            <div class="flex items-center justify-between rounded-lg border border-green-100 bg-green-50 px-4 py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                        <span class="text-xs font-bold">6</span>
+                    </div>
+                    <span class="text-sm font-medium text-slate-700">Concluir job</span>
+                </div>
+                <form method="post" action="{% url 'jobs:status_update' job.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="new_status" value="CONCLUIDO">
+                    <button type="submit"
+                            class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors">
+                        Marcar como concluído
+                    </button>
+                </form>
+            </div>
+            {% endif %}
 
         </div>
     </div>

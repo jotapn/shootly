@@ -1,0 +1,276 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Marca d'água{% endblock %}
+{% block page_title %}Configuração de Marca d'água{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <p class="text-sm text-slate-500 mb-6">
+        A marca d'água é aplicada automaticamente nas fotos brutas ao criar uma seleção para o cliente.
+        Somente arquivos JPEG/PNG são suportados — fotos RAW não recebem marca d'água.
+    </p>
+
+    <form method="post" enctype="multipart/form-data" novalidate
+          x-data="{
+              modo: '{% if config %}{{ config.modo }}{% else %}unico{% endif %}',
+              opacidade: {{ config.opacidade|default:50 }},
+              tamanho: {{ config.tamanho_pct|default:20 }},
+              posicao: '{% if config %}{{ config.posicao }}{% else %}inferior_dir{% endif %}',
+              rotacao: {{ config.rotacao|default:-30 }},
+              espacamento: {{ config.espacamento_pct|default:10 }},
+              logoUrl: '{% if config and config.arquivo_png %}{{ config.arquivo_png.url }}{% endif %}',
+              img: null,
+
+              carregarArquivo(event) {
+                  const file = event.target.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                      this.logoUrl = e.target.result;
+                      this.carregarImagem();
+                  };
+                  reader.readAsDataURL(file);
+              },
+
+              carregarImagem() {
+                  const i = new Image();
+                  i.onload = () => { this.img = i; this.desenhar(); };
+                  i.src = this.logoUrl;
+              },
+
+              desenhar() {
+                  if (!this.img) return;
+                  const canvas = this.$refs.canvas;
+                  if (!canvas) return;
+                  const ctx = canvas.getContext('2d');
+                  const W = canvas.width;
+                  const H = canvas.height;
+                  ctx.clearRect(0, 0, W, H);
+
+                  const mw = Math.round(W * this.tamanho / 100);
+                  const mh = Math.round(mw * (this.img.naturalHeight / this.img.naturalWidth));
+                  const alpha = this.opacidade / 100;
+
+                  if (this.modo === 'grade') {
+                      const espPx = Math.round(W * this.espacamento / 100);
+                      const stepX = mw + espPx;
+                      const stepY = mh + espPx;
+
+                      // Cria tile offscreen
+                      const tile = document.createElement('canvas');
+                      tile.width = stepX;
+                      tile.height = stepY;
+                      const tctx = tile.getContext('2d');
+                      tctx.globalAlpha = alpha;
+                      tctx.drawImage(this.img, 0, 0, mw, mh);
+
+                      const pattern = ctx.createPattern(tile, 'repeat');
+                      const rad = this.rotacao * Math.PI / 180;
+
+                      ctx.save();
+                      ctx.translate(W / 2, H / 2);
+                      ctx.rotate(rad);
+                      // Tamanho extra para cobrir canvas ao rotacionar
+                      const extra = Math.abs(W * Math.sin(rad)) + Math.abs(H * Math.sin(rad)) + Math.max(mw, mh);
+                      ctx.translate(-(W / 2 + extra), -(H / 2 + extra));
+                      ctx.fillStyle = pattern;
+                      ctx.fillRect(0, 0, W + extra * 2, H + extra * 2);
+                      ctx.restore();
+                  } else {
+                      const posMap = {
+                          centro:       [W / 2 - mw / 2,  H / 2 - mh / 2],
+                          superior_esq: [10, 10],
+                          superior_dir: [W - mw - 10, 10],
+                          inferior_esq: [10, H - mh - 10],
+                          inferior_dir: [W - mw - 10, H - mh - 10],
+                      };
+                      const [x, y] = posMap[this.posicao] || posMap.inferior_dir;
+                      ctx.globalAlpha = alpha;
+                      ctx.drawImage(this.img, x, y, mw, mh);
+                  }
+              }
+          }"
+          x-init="
+              if (logoUrl) carregarImagem();
+              $watch('opacidade',   () => desenhar());
+              $watch('tamanho',     () => desenhar());
+              $watch('posicao',     () => desenhar());
+              $watch('modo',        () => desenhar());
+              $watch('rotacao',     () => desenhar());
+              $watch('espacamento', () => desenhar());
+          ">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Coluna esquerda: controles -->
+            <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+
+                <!-- PNG upload -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Arquivo PNG da marca d'água</label>
+                    <input type="file" name="arquivo_png" accept="image/png,image/jpeg"
+                           @change="carregarArquivo"
+                           class="block w-full text-sm text-slate-500
+                                  file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                                  file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700
+                                  hover:file:bg-blue-100 file:cursor-pointer">
+                    {% if config and config.arquivo_png %}
+                    <p class="mt-1 text-xs text-slate-400">Atual: <span class="font-medium text-slate-600">{{ config.arquivo_png.name|truncatechars:40 }}</span></p>
+                    {% else %}
+                    <p class="mt-1 text-xs text-slate-400">Use PNG com fundo transparente para melhor resultado.</p>
+                    {% endif %}
+                    {% for e in form.arquivo_png.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+
+                <!-- Modo -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Modo</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" @click="modo = 'unico'"
+                                :class="modo === 'unico' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'"
+                                class="rounded-lg border-2 px-3 py-3 text-sm font-medium transition-colors text-center">
+                            <div class="text-lg mb-1">🔲</div>
+                            Posição única
+                        </button>
+                        <button type="button" @click="modo = 'grade'"
+                                :class="modo === 'grade' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'"
+                                class="rounded-lg border-2 px-3 py-3 text-sm font-medium transition-colors text-center">
+                            <div class="text-lg mb-1">⊞</div>
+                            Grade completa
+                        </button>
+                    </div>
+                    <input type="hidden" name="modo" :value="modo">
+                </div>
+
+                <!-- Opacidade (sempre visível) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-sm font-medium text-slate-700">Opacidade</label>
+                        <span x-text="opacidade + '%'" class="text-sm font-bold text-blue-600 tabular-nums w-12 text-right"></span>
+                    </div>
+                    <input type="range" name="opacidade" min="0" max="100"
+                           x-model="opacidade"
+                           class="w-full accent-blue-600 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Tamanho (sempre visível) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-sm font-medium text-slate-700">Tamanho</label>
+                        <span x-text="tamanho + '%'" class="text-sm font-bold text-blue-600 tabular-nums w-12 text-right"></span>
+                    </div>
+                    <input type="range" name="tamanho_pct" min="5" max="50"
+                           x-model="tamanho"
+                           class="w-full accent-blue-600 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Posição (só modo único) -->
+                <div x-show="modo === 'unico'" x-transition>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Posição</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" @click="posicao = 'superior_esq'"
+                                :class="posicao === 'superior_esq' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                class="rounded py-2 text-xs font-medium transition-colors">↖</button>
+                        <div></div>
+                        <button type="button" @click="posicao = 'superior_dir'"
+                                :class="posicao === 'superior_dir' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                class="rounded py-2 text-xs font-medium transition-colors">↗</button>
+                        <div></div>
+                        <button type="button" @click="posicao = 'centro'"
+                                :class="posicao === 'centro' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                class="rounded py-2 text-xs font-medium transition-colors">⊕</button>
+                        <div></div>
+                        <button type="button" @click="posicao = 'inferior_esq'"
+                                :class="posicao === 'inferior_esq' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                class="rounded py-2 text-xs font-medium transition-colors">↙</button>
+                        <div></div>
+                        <button type="button" @click="posicao = 'inferior_dir'"
+                                :class="posicao === 'inferior_dir' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                class="rounded py-2 text-xs font-medium transition-colors">↘</button>
+                    </div>
+                    <input type="hidden" name="posicao" :value="posicao">
+                </div>
+
+                <!-- Rotação (só modo grade) -->
+                <div x-show="modo === 'grade'" x-transition>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-sm font-medium text-slate-700">Rotação</label>
+                        <span x-text="rotacao + '°'" class="text-sm font-bold text-blue-600 tabular-nums w-12 text-right"></span>
+                    </div>
+                    <input type="range" name="rotacao" min="-90" max="90"
+                           x-model="rotacao"
+                           class="w-full accent-blue-600 h-2 rounded-lg cursor-pointer">
+                    <div class="flex justify-between text-xs text-slate-400 mt-0.5">
+                        <span>−90°</span><span>0°</span><span>+90°</span>
+                    </div>
+                </div>
+
+                <!-- Espaçamento (só modo grade) -->
+                <div x-show="modo === 'grade'" x-transition>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-sm font-medium text-slate-700">Espaçamento entre repetições</label>
+                        <span x-text="espacamento + '%'" class="text-sm font-bold text-blue-600 tabular-nums w-12 text-right"></span>
+                    </div>
+                    <input type="range" name="espacamento_pct" min="0" max="30"
+                           x-model="espacamento"
+                           class="w-full accent-blue-600 h-2 rounded-lg cursor-pointer">
+                    <div class="flex justify-between text-xs text-slate-400 mt-0.5">
+                        <span>Sem espaço</span><span>Espaçado</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Coluna direita: preview canvas ao vivo -->
+            <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+                <p class="text-sm font-medium text-slate-700 mb-3">Preview ao vivo</p>
+
+                <div class="relative flex-1 min-h-64 bg-slate-200 rounded-lg overflow-hidden border border-slate-300">
+                    <!-- Ícone de foto de fundo simulando a foto do cliente -->
+                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                        <svg class="w-14 h-14 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span x-show="!logoUrl" class="text-xs text-slate-400 text-center px-6">
+                            Selecione um arquivo PNG para ver o preview
+                        </span>
+                    </div>
+
+                    <!-- Canvas para renderizar a marca d'água -->
+                    <canvas x-ref="canvas" width="480" height="320"
+                            class="absolute inset-0 w-full h-full"
+                            style="mix-blend-mode: normal;"></canvas>
+                </div>
+
+                <div x-show="logoUrl" class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                    <div class="rounded bg-slate-50 px-3 py-2">
+                        <span class="text-slate-400">Modo:</span>
+                        <span class="font-medium" x-text="modo === 'grade' ? 'Grade' : 'Posição única'"></span>
+                    </div>
+                    <div class="rounded bg-slate-50 px-3 py-2">
+                        <span class="text-slate-400">Opacidade:</span>
+                        <span class="font-medium" x-text="opacidade + '%'"></span>
+                    </div>
+                </div>
+
+                <p class="mt-3 text-xs text-slate-400">
+                    Preview aproximado. O resultado real no Pillow pode variar levemente.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-5 flex items-center gap-3">
+            <button type="submit"
+                    class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                Salvar configuração
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+{% endblock %}

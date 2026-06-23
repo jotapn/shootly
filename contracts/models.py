@@ -1,6 +1,7 @@
 import hashlib
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 from jobs.models import Job
@@ -47,3 +48,20 @@ class Contrato(models.Model):
 
         self.job.status = self.job.STATUS_CONTRATO_ASSINADO
         self.job.save()
+
+
+class ModeloContrato(models.Model):
+    fotografo = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="modelos_contrato",
+    )
+    nome = models.CharField(max_length=120)
+    conteudo_template = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome

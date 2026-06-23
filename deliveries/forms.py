@@ -5,8 +5,30 @@ from django import forms
 from jobs.models import ArquivoFoto
 
 ALLOWED_EXTENSIONS = {
-    ".jpg", ".jpeg", ".png", ".tif", ".tiff",
-    ".raw", ".cr2", ".nef", ".arw", ".dng",
+    # Formatos web/editados
+    ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp",
+    # RAW genérico
+    ".raw", ".dng",
+    # Canon
+    ".cr2", ".cr3",
+    # Nikon
+    ".nef", ".nrw",
+    # Sony
+    ".arw", ".srf", ".sr2",
+    # Fujifilm
+    ".raf",
+    # Olympus / OM System
+    ".orf",
+    # Panasonic
+    ".rw2",
+    # Pentax
+    ".pef", ".ptx",
+    # Samsung
+    ".srw",
+    # Leica / Sigma
+    ".rwl", ".x3f",
+    # Hasselblad
+    ".3fr",
 }
 MAX_SIZE_MB = 50
 

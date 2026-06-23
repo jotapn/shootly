@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Contrato
+from .models import Contrato, ModeloContrato
 
 _INPUT = (
     "block w-full rounded-md border border-slate-300 px-3 py-2 "
@@ -14,6 +14,24 @@ class ContratoForm(forms.ModelForm):
         fields = ["conteudo"]
         widgets = {
             "conteudo": forms.Textarea(attrs={"rows": 20, "class": _INPUT + " font-mono text-xs"}),
+        }
+
+
+class ModeloContratoForm(forms.ModelForm):
+    class Meta:
+        model = ModeloContrato
+        fields = ["nome", "conteudo_template"]
+        widgets = {
+            "nome": forms.TextInput(attrs={"class": _INPUT}),
+            "conteudo_template": forms.Textarea(attrs={
+                "rows": 20,
+                "class": _INPUT + " font-mono text-xs",
+                "placeholder": (
+                    "Use variáveis: {{nome_cliente}}, {{empresa_cliente}}, "
+                    "{{valor_total}}, {{data_hoje}}, {{servicos}}, "
+                    "{{nome_fotografo}}, {{nome_empresa}}"
+                ),
+            }),
         }
 
 

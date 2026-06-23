@@ -4,32 +4,74 @@
 {% block page_title %}Gerar Contrato — {{ job.titulo|default:"Job" }}{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <p class="text-sm text-slate-500">
-        O texto abaixo foi gerado automaticamente. Você pode editá-lo antes de salvar.
-        Após salvo, o link de assinatura estará disponível para enviar ao cliente.
-    </p>
-</div>
+<div class="max-w-4xl">
+    {% if modelos %}
+    <div class="mb-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <label class="block text-sm font-medium text-slate-700 mb-2">Usar modelo de contrato</label>
+        <div class="flex items-center gap-3">
+            <select id="select-modelo"
+                    class="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-400 focus:ring">
+                <option value="">— Personalizado (não usar modelo) —</option>
+                {% for modelo in modelos %}
+                <option value="{{ modelo.pk }}">{{ modelo.nome }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" onclick="aplicarModelo()"
+                    class="rounded-lg bg-slate-100 border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 transition-colors">
+                Aplicar modelo
+            </button>
+        </div>
+        <p class="mt-2 text-xs text-slate-400">
+            Ao aplicar, as variáveis ({% templatetag openbrace %}{% templatetag openbrace %}nome_cliente{% templatetag closebrace %}{% templatetag closebrace %} etc.) serão substituídas pelos dados deste job.
+        </p>
+    </div>
+    {% endif %}
 
-<form method="post" novalidate>
-    {% csrf_token %}
-    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm mb-4">
-        {{ form.conteudo }}
-        {% if form.conteudo.errors %}
-            {% for error in form.conteudo.errors %}
-                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-            {% endfor %}
-        {% endif %}
+    <div class="mb-4">
+        <p class="text-sm text-slate-500">
+            O texto abaixo será salvo como contrato. Você pode editar antes de salvar.
+            Após salvo, o link de assinatura estará disponível para enviar ao cliente.
+        </p>
     </div>
-    <div class="flex items-center gap-3">
-        <button type="submit"
-                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
-            Salvar contrato
-        </button>
-        <a href="{% url 'jobs:detail' job.pk %}"
-           class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-        </a>
-    </div>
-</form>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm mb-4">
+            {{ form.conteudo }}
+            {% if form.conteudo.errors %}
+                {% for error in form.conteudo.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="flex items-center gap-3">
+            <button type="submit"
+                    class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                Salvar contrato
+            </button>
+            <a href="{% url 'jobs:detail' job.pk %}"
+               class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<script>
+const MODELOS = {{ modelos_json|safe }};
+const VARIAVEIS = {{ variaveis_json|safe }};
+
+function aplicarModelo() {
+    const sel = document.getElementById("select-modelo");
+    const template = MODELOS[sel.value];
+    if (!template) return;
+    let texto = template;
+    for (const [chave, valor] of Object.entries(VARIAVEIS)) {
+        texto = texto.split(chave).join(valor);
+    }
+    document.getElementById("id_conteudo").value = texto;
+}
+</script>
 {% endblock %}

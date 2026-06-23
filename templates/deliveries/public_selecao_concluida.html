@@ -1,0 +1,22 @@
+{% extends "base_publica.html" %}
+
+{% block title %}Seleção Concluída{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center py-20 text-center">
+    <div class="rounded-full bg-green-100 p-6 mb-6">
+        <svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-slate-800 mb-3">Seleção enviada com sucesso!</h2>
+    <p class="text-slate-500 max-w-md">
+        Recebemos a sua seleção de fotos.
+        O fotógrafo entrará em contato em breve com as próximas etapas.
+    </p>
+    <div class="mt-8 rounded-xl border border-slate-200 bg-white px-8 py-5 shadow-sm">
+        <p class="text-sm text-slate-500">Fotos selecionadas por você:</p>
+        <p class="text-3xl font-bold text-primaria mt-1">{{ fotos_selecionadas }}</p>
+    </div>
+</div>
+{% endblock %}

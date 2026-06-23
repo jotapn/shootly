@@ -18,8 +18,10 @@
         Upload de fotos
     </a>
     {% if pode_criar_selecao %}
-    <form method="post" action="{% url 'deliveries:selecao_create' job.pk %}">
+    <form method="post" action="{% url 'deliveries:selecao_create' job.pk %}" class="flex items-center gap-2">
         {% csrf_token %}
+        <input type="number" name="max_fotos" min="1" placeholder="Limite de fotos (opcional)"
+               class="rounded-lg border border-slate-300 px-3 py-2 text-sm w-52 outline-none ring-blue-400 focus:ring">
         <button type="submit"
                 class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors">
             Criar seleção para cliente

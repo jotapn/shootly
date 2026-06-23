@@ -53,7 +53,8 @@ class JobDetailView(FotografoMixin, DetailView):
         job = self.object
         ctx["tem_contrato"] = hasattr(job, "contrato")
         ctx["tem_selecao"] = hasattr(job, "selecao")
-        ctx["tem_portal"] = hasattr(job, "portalentrega")
+        ctx["tem_portal"] = hasattr(job, "portal_entrega")
+        ctx["portal"] = job.portal_entrega if hasattr(job, "portal_entrega") else None
         ctx["tem_pagamento"] = hasattr(job, "pagamento")
         return ctx
 
