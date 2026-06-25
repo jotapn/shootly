@@ -205,6 +205,8 @@ def orcamento_public_approve(request, token):
         orcamento=orcamento,
         titulo=f"Job — {orcamento.cliente.nome}",
         valor_total=orcamento.valor_total,
+        quantidade_fotos_incluidas=orcamento.quantidade_fotos_incluidas,
+        valor_foto_extra=orcamento.valor_foto_extra,
         status=Job.STATUS_CONTRATO_PENDENTE,
     )
     return render(request, "orcamentos/public_responded.html", {"orcamento": orcamento, "aprovado": True})

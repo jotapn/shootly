@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from django import forms as django_forms
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import DetailView, ListView, UpdateView
@@ -24,6 +25,29 @@ class JobTituloForm(django_forms.ModelForm):
                 "text-sm outline-none ring-blue-400 focus:ring"
             )
         })
+
+
+class JobProducaoForm(django_forms.ModelForm):
+    class Meta:
+        model = Job
+        fields = ["data_producao"]
+        widgets = {
+            "data_producao": django_forms.DateTimeInput(
+                attrs={
+                    "type": "datetime-local",
+                    "class": (
+                        "rounded-md border border-slate-300 px-3 py-2 text-sm "
+                        "outline-none ring-blue-400 focus:ring"
+                    ),
+                },
+                format="%Y-%m-%dT%H:%M",
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["data_producao"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields["data_producao"].label = "Data da producao"
 
 
 class JobListView(FotografoMixin, ListView):
@@ -56,6 +80,7 @@ class JobDetailView(FotografoMixin, DetailView):
         ctx["tem_portal"] = hasattr(job, "portal_entrega")
         ctx["portal"] = job.portal_entrega if hasattr(job, "portal_entrega") else None
         ctx["tem_pagamento"] = hasattr(job, "pagamento")
+        ctx["producao_form"] = JobProducaoForm(instance=job)
         return ctx
 
 
@@ -86,4 +111,24 @@ def job_status_update_view(request, pk):
         job.save(update_fields=["status", "updated_at"])
     if request.headers.get("HX-Request"):
         return render(request, "jobs/_job_card.html", {"job": job})
-    return redirect("jobs:list")
+    next_url = request.POST.get("next", "")
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect("jobs:detail", pk=job.pk)
+
+
+@login_required
+def job_producao_agendar_view(request, pk):
+    job = get_object_or_404(Job, pk=pk, fotografo=request.user)
+    if request.method != "POST":
+        return redirect("jobs:detail", pk=job.pk)
+    if job.status not in (Job.STATUS_CONTRATO_ASSINADO, Job.STATUS_EM_PRODUCAO):
+        messages.error(request, "A producao so pode ser agendada depois do contrato assinado.")
+        return redirect("jobs:detail", pk=job.pk)
+    form = JobProducaoForm(request.POST, instance=job)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Producao agendada.")
+    else:
+        messages.error(request, "Nao foi possivel salvar a data de producao.")
+    return redirect("jobs:detail", pk=job.pk)

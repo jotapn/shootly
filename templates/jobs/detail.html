@@ -3,6 +3,22 @@
 {% block title %}{{ job.titulo|default:"Job" }}{% endblock %}
 {% block page_title %}{{ job.titulo|default:"Job sem título" }}{% endblock %}
 
+{% block extra_head %}
+<script>
+async function copyJobLink(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const text = (el.value || el.textContent || "").trim();
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (e) {
+        if (el.select) el.select();
+        document.execCommand("copy");
+    }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-wrap items-center gap-3 mb-6">
     <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800">
@@ -34,6 +50,18 @@
             <div>
                 <dt class="text-xs text-slate-400">Valor total</dt>
                 <dd class="font-semibold text-slate-900 text-base">R$ {{ job.valor_total|floatformat:2 }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Fotos incluidas</dt>
+                <dd class="text-slate-700">{{ job.quantidade_fotos_incluidas|default:"Nao definido" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Valor por foto extra</dt>
+                <dd class="text-slate-700">R$ {{ job.valor_foto_extra|floatformat:2 }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Data da producao</dt>
+                <dd class="text-slate-700">{{ job.data_producao|date:"d/m/Y H:i"|default:"Nao agendada" }}</dd>
             </div>
             <div>
                 <dt class="text-xs text-slate-400">Criado em</dt>
@@ -74,9 +102,16 @@
                 <div class="flex flex-col items-end gap-1">
                     <a href="{% url 'contracts:detail' job.pk %}" class="text-xs text-blue-600 hover:underline">Ver contrato →</a>
                     {% if job.contrato.status == "PENDENTE" %}
-                    <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'contracts:public_view' job.contrato.link_token %}"
-                       target="_blank"
-                       class="text-xs text-slate-500 hover:underline">Link p/ assinatura →</a>
+                    <input id="contract-link" type="text" readonly class="sr-only"
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'contracts:public_view' job.contrato.link_token %}">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'contracts:public_view' job.contrato.link_token %}"
+                           target="_blank"
+                           class="text-xs text-slate-500 hover:underline">Link p/ assinatura →</a>
+                        <button type="button" onclick="copyJobLink('contract-link')" class="text-xs font-medium text-blue-600 hover:underline">
+                            Copiar
+                        </button>
+                    </div>
                     {% endif %}
                 </div>
                 {% elif job.status == "CONTRATO_PENDENTE" %}
@@ -88,6 +123,51 @@
                 <span class="text-xs text-slate-400">Aguardando aprovação do orçamento</span>
                 {% endif %}
             </div>
+
+            {% if tem_contrato and job.contrato.status == "ASSINADO" %}
+            <div class="rounded-lg border border-slate-100 px-4 py-3">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center
+                            {% if job.status == 'EM_PRODUCAO' %}bg-green-100 text-green-600{% else %}bg-slate-100 text-slate-400{% endif %}">
+                            <span class="text-xs font-bold">2</span>
+                        </div>
+                        <span class="text-sm font-medium text-slate-700">Producao</span>
+                    </div>
+                    {% if job.status == "CONTRATO_ASSINADO" %}
+                    <form method="post" action="{% url 'jobs:status_update' job.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="EM_PRODUCAO">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit"
+                                class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors">
+                            Iniciar producao
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="text-xs text-slate-500">{{ job.get_status_display }}</span>
+                    {% endif %}
+                </div>
+
+                <form method="post" action="{% url 'jobs:producao_agendar' job.pk %}" class="flex flex-wrap items-end gap-2">
+                    {% csrf_token %}
+                    <label class="text-xs font-medium text-slate-500">
+                        Data
+                        <input type="datetime-local" name="data_producao"
+                               value="{{ job.data_producao|date:'Y-m-d\\TH:i' }}"
+                               class="mt-1 block rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-400 focus:ring">
+                    </label>
+                    <button type="submit"
+                            class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                        Agendar
+                    </button>
+                    <a href="{% url 'deliveries:foto_upload' job.pk %}?tipo=BRUTA"
+                       class="rounded-lg bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700">
+                        Upload de brutas
+                    </a>
+                </form>
+            </div>
+            {% endif %}
 
             <!-- 2. Fotos brutas -->
             <div class="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-3">
@@ -123,9 +203,16 @@
                 <div class="flex flex-col items-end gap-1">
                     <span class="text-xs text-slate-500">{{ job.selecao.get_status_display }}</span>
                     {% if job.selecao.status == "PENDENTE" %}
-                    <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_selecao' job.selecao.link_token %}"
-                       target="_blank"
-                       class="text-xs text-blue-600 hover:underline">Link do cliente →</a>
+                    <input id="selection-link" type="text" readonly class="sr-only"
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_selecao' job.selecao.link_token %}">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_selecao' job.selecao.link_token %}"
+                           target="_blank"
+                           class="text-xs text-blue-600 hover:underline">Link do cliente →</a>
+                        <button type="button" onclick="copyJobLink('selection-link')" class="text-xs font-medium text-blue-600 hover:underline">
+                            Copiar
+                        </button>
+                    </div>
                     {% elif job.selecao.status == "CONCLUIDA" %}
                     <form method="post" action="{% url 'jobs:status_update' job.pk %}">
                         {% csrf_token %}
@@ -171,16 +258,30 @@
                 {% if portal and portal.status == 'LIBERADO' %}
                 <div class="flex flex-col items-end gap-1">
                     <span class="text-xs font-medium text-green-600">Liberado ✓</span>
-                    <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}"
-                       target="_blank"
-                       class="text-xs text-blue-600 hover:underline">Link do cliente →</a>
+                    <input id="delivery-link" type="text" readonly class="sr-only"
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}"
+                           target="_blank"
+                           class="text-xs text-blue-600 hover:underline">Link do cliente →</a>
+                        <button type="button" onclick="copyJobLink('delivery-link')" class="text-xs font-medium text-blue-600 hover:underline">
+                            Copiar
+                        </button>
+                    </div>
                 </div>
 
                 {% elif portal and portal.status == 'BLOQUEADO' %}
                 <div class="flex flex-col items-end gap-1">
-                    <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}"
-                       target="_blank"
-                       class="text-xs text-slate-500 hover:underline">Link do portal →</a>
+                    <input id="delivery-link" type="text" readonly class="sr-only"
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{% url 'deliveries:public_portal' portal.link_token %}"
+                           target="_blank"
+                           class="text-xs text-slate-500 hover:underline">Link do portal →</a>
+                        <button type="button" onclick="copyJobLink('delivery-link')" class="text-xs font-medium text-blue-600 hover:underline">
+                            Copiar
+                        </button>
+                    </div>
                     <form method="post" action="{% url 'deliveries:portal_liberar' job.pk %}">
                         {% csrf_token %}
                         <button type="submit"

@@ -25,7 +25,11 @@ class ServicoForm(forms.ModelForm):
 class OrcamentoForm(forms.ModelForm):
     class Meta:
         model = Orcamento
-        fields = ["cliente"]
+        fields = ["cliente", "quantidade_fotos_incluidas", "valor_foto_extra"]
+        labels = {
+            "quantidade_fotos_incluidas": "Fotos incluidas no pacote",
+            "valor_foto_extra": "Valor por foto extra",
+        }
 
     def __init__(self, *args, fotografo=None, **kwargs):
         super().__init__(*args, **kwargs)

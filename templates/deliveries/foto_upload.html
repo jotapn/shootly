@@ -1,16 +1,33 @@
 {% extends "dashboard_base.html" %}
 
 {% block title %}Upload de Fotos{% endblock %}
-{% block page_title %}Upload de Fotos — {{ job.titulo|default:"Job" }}{% endblock %}
+{% block page_title %}Upload de Fotos - {{ job.titulo|default:"Job" }}{% endblock %}
 
 {% block content %}
 <div class="max-w-lg">
     <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form method="post" enctype="multipart/form-data" novalidate>
+        <form id="foto-upload-form" method="post" enctype="multipart/form-data" novalidate action="{{ request.get_full_path }}">
             {% csrf_token %}
             <div class="space-y-4">
+                {% if tipo_fixo %}
                 <div>
-                    <label for="{{ form.tipo.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+                    <input type="hidden" name="tipo" value="{{ tipo_fixo }}">
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium
+                        {% if tipo_fixo == 'BRUTA' %}bg-orange-100 text-orange-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                        Upload de {% if tipo_fixo == 'BRUTA' %}brutas{% else %}editadas{% endif %}
+                    </span>
+                    <p class="mt-2 text-sm text-slate-500">
+                        As fotos enviadas aqui serao salvas como {{ tipo_label|lower }}.
+                    </p>
+                    {% if form.tipo.errors %}
+                        {% for error in form.tipo.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% else %}
+                <div>
+                    <label for="{{ form.tipo.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-700">
                         Tipo de arquivo
                     </label>
                     {{ form.tipo }}
@@ -20,14 +37,22 @@
                         {% endfor %}
                     {% endif %}
                 </div>
+                {% endif %}
+
                 <div>
-                    <label for="{{ form.arquivos.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">
+                    <label for="{{ form.arquivos.id_for_label }}" class="mb-1 block text-sm font-medium text-slate-700">
                         Arquivos <span class="text-red-500">*</span>
                     </label>
                     {{ form.arquivos }}
                     <p class="mt-1 text-xs text-slate-400">
-                        Formatos aceitos: JPG, PNG, TIF, WEBP — RAW: CR2, CR3, NEF, NRW, ARW, RAF, ORF, RW2, PEF, DNG e outros. Máximo 50 MB por arquivo.
+                        Formatos aceitos: JPG, PNG, TIF, WEBP; RAW: CR2, CR3, NEF, NRW, ARW, RAF, ORF, RW2, PEF, DNG e outros. Maximo 50 MB por arquivo.
                     </p>
+                    <div id="upload-file-summary" class="mt-3 hidden rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-sm font-medium text-slate-700">
+                            <span id="upload-file-count">0</span> arquivo(s) selecionado(s)
+                        </p>
+                        <ul id="upload-file-list" class="mt-2 max-h-32 space-y-1 overflow-auto text-xs text-slate-500"></ul>
+                    </div>
                     {% if form.arquivos.errors %}
                         {% for error in form.arquivos.errors %}
                             <p class="mt-1 text-xs text-red-600">{{ error }}</p>
@@ -35,17 +60,76 @@
                     {% endif %}
                 </div>
             </div>
+
             <div class="mt-6 flex items-center gap-3">
                 <button type="submit"
-                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700">
                     Enviar fotos
                 </button>
                 <a href="{% url 'deliveries:foto_list' job.pk %}"
-                   class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                   class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
                     Cancelar
                 </a>
             </div>
         </form>
     </div>
 </div>
+
+<div id="upload-loading"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+    <div class="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
+        <div class="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+        <h2 class="mt-4 text-lg font-semibold text-slate-900">Enviando fotos</h2>
+        <p class="mt-2 text-sm text-slate-500">
+            Mantenha esta aba aberta. Depois do upload, o sistema vai gerar os previews para JPG, PNG e RAW/CR3.
+        </p>
+        <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+            <div class="h-full w-1/2 animate-pulse rounded-full bg-blue-600"></div>
+        </div>
+        <p id="upload-loading-count" class="mt-3 text-xs text-slate-400"></p>
+    </div>
+</div>
+
+<script>
+(function() {
+    const form = document.getElementById("foto-upload-form");
+    const input = document.getElementById("{{ form.arquivos.id_for_label }}");
+    const summary = document.getElementById("upload-file-summary");
+    const count = document.getElementById("upload-file-count");
+    const list = document.getElementById("upload-file-list");
+    const loading = document.getElementById("upload-loading");
+    const loadingCount = document.getElementById("upload-loading-count");
+
+    if (!form || !input) return;
+
+    input.addEventListener("change", function() {
+        const files = Array.from(input.files || []);
+        count.textContent = files.length;
+        list.innerHTML = "";
+
+        files.slice(0, 12).forEach(function(file) {
+            const item = document.createElement("li");
+            const sizeMb = file.size / 1024 / 1024;
+            item.textContent = file.name + " - " + sizeMb.toFixed(1) + " MB";
+            list.appendChild(item);
+        });
+
+        if (files.length > 12) {
+            const extra = document.createElement("li");
+            extra.textContent = "+ " + (files.length - 12) + " arquivo(s)";
+            list.appendChild(extra);
+        }
+
+        summary.classList.toggle("hidden", files.length === 0);
+    });
+
+    form.addEventListener("submit", function() {
+        const files = Array.from(input.files || []);
+        if (!files.length) return;
+        loadingCount.textContent = files.length + " arquivo(s) em processamento";
+        loading.classList.remove("hidden");
+        loading.classList.add("flex");
+    });
+})();
+</script>
 {% endblock %}

@@ -10,26 +10,27 @@ logger = logging.getLogger(__name__)
 
 def aplicar_marca_dagua(arquivo_foto, config):
     """
-    Aplica marca d'água em arquivo_foto.arquivo usando config.
-    Salva resultado em arquivo_foto.arquivo_protegido.
-    Retorna False se o arquivo não for imagem suportada pelo Pillow (ex: RAW).
-    Usa .path para garantir acesso direto ao arquivo local (MVP com FileSystemStorage).
+    Aplica marca d'agua no arquivo original ou, para RAWs, no thumbnail gerado.
+    Salva o resultado em arquivo_foto.arquivo_protegido.
     """
-    try:
-        foto = Image.open(arquivo_foto.arquivo.path).convert("RGBA")
-    except Exception as e:
-        logger.warning("watermark: não foi possível abrir foto pk=%s (%s): %s", arquivo_foto.pk, arquivo_foto.arquivo.name, e)
+    foto = _abrir_imagem_base(arquivo_foto)
+    if foto is None:
         return False
 
     try:
         marca = Image.open(config.arquivo_png.path).convert("RGBA")
-    except Exception as e:
-        logger.warning("watermark: não foi possível abrir marca d'água pk=%s (%s): %s", config.pk, config.arquivo_png.name, e)
+    except Exception as exc:
+        logger.warning(
+            "watermark: nao foi possivel abrir marca d'agua pk=%s (%s): %s",
+            config.pk,
+            config.arquivo_png.name,
+            exc,
+        )
         return False
 
     nova_larg = max(1, int(foto.width * config.tamanho_pct / 100))
     nova_alt = max(1, int(marca.height * nova_larg / marca.width))
-    marca = marca.resize((nova_larg, nova_alt), Image.LANCZOS)
+    marca = marca.resize((nova_larg, nova_alt), Image.Resampling.LANCZOS)
 
     r, g, b, a = marca.split()
     a = ImageEnhance.Brightness(a).enhance(config.opacidade / 100)
@@ -51,11 +52,35 @@ def aplicar_marca_dagua(arquivo_foto, config):
     return True
 
 
+def _abrir_imagem_base(arquivo_foto):
+    try:
+        return Image.open(arquivo_foto.arquivo.path).convert("RGBA")
+    except Exception as exc:
+        if arquivo_foto.thumbnail:
+            try:
+                return Image.open(arquivo_foto.thumbnail.path).convert("RGBA")
+            except Exception as thumb_exc:
+                logger.warning(
+                    "watermark: nao foi possivel abrir thumbnail pk=%s (%s): %s",
+                    arquivo_foto.pk,
+                    arquivo_foto.thumbnail.name,
+                    thumb_exc,
+                )
+                return None
+        logger.warning(
+            "watermark: nao foi possivel abrir foto pk=%s (%s): %s",
+            arquivo_foto.pk,
+            arquivo_foto.arquivo.name,
+            exc,
+        )
+        return None
+
+
 def _montar_unico(size, marca, config):
     fw, fh = size
     mw, mh = marca.size
     pos_map = {
-        "centro":       ((fw - mw) // 2, (fh - mh) // 2),
+        "centro": ((fw - mw) // 2, (fh - mh) // 2),
         "superior_esq": (10, 10),
         "superior_dir": (fw - mw - 10, 10),
         "inferior_esq": (10, fh - mh - 10),
@@ -83,7 +108,7 @@ def _montar_grade(size, marca, config):
             canvas.paste(marca, (x, y), marca)
 
     if config.rotacao:
-        canvas = canvas.rotate(config.rotacao, resample=Image.BILINEAR, expand=False)
+        canvas = canvas.rotate(config.rotacao, resample=Image.Resampling.BILINEAR, expand=False)
 
     left = (canvas.width - fw) // 2
     top = (canvas.height - fh) // 2

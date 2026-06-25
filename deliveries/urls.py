@@ -8,6 +8,7 @@ urlpatterns = [
     path("jobs/<int:job_pk>/fotos/", views.foto_list_view, name="foto_list"),
     path("jobs/<int:job_pk>/fotos/upload/", views.foto_upload_view, name="foto_upload"),
     path("fotos/<int:foto_pk>/delete/", views.foto_delete_view, name="foto_delete"),
+    path("jobs/<int:job_pk>/bracketing/criar/", views.bracketing_create_view, name="bracketing_create"),
     path("jobs/<int:job_pk>/selecao/criar/", views.selecao_create_view, name="selecao_create"),
     path("jobs/<int:job_pk>/entrega/criar/", views.portal_create_view, name="portal_create"),
     path("jobs/<int:job_pk>/entrega/liberar/", views.portal_liberar_view, name="portal_liberar"),

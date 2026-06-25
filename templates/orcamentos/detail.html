@@ -58,6 +58,14 @@
                 <dt class="text-xs text-slate-400">Criado em</dt>
                 <dd class="text-slate-700">{{ orcamento.created_at|date:"d/m/Y H:i" }}</dd>
             </div>
+            <div>
+                <dt class="text-xs text-slate-400">Fotos incluidas</dt>
+                <dd class="text-slate-700">{{ orcamento.quantidade_fotos_incluidas|default:"Nao definido" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Valor por foto extra</dt>
+                <dd class="text-slate-700">R$ {{ orcamento.valor_foto_extra|floatformat:2 }}</dd>
+            </div>
             {% if orcamento.enviado_em %}
             <div>
                 <dt class="text-xs text-slate-400">Enviado em</dt>

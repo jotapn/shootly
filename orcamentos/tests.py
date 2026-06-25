@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from clients.models import Cliente
+from jobs.models import Job
 from orcamentos.models import Orcamento, OrcamentoItem, Servico
 
 User = get_user_model()
@@ -51,3 +53,20 @@ class OrcamentoModelTests(TestCase):
         item.refresh_from_db()
         self.assertIsNone(item.servico)
         self.assertEqual(OrcamentoItem.objects.count(), 1)
+
+    def test_public_approve_copies_selection_terms_to_job(self):
+        orcamento = Orcamento.objects.create(
+            fotografo=self.fotografo,
+            cliente=self.cliente,
+            valor_total=1500,
+            status=Orcamento.STATUS_ENVIADO,
+            quantidade_fotos_incluidas=12,
+            valor_foto_extra=80,
+        )
+        response = self.client.post(reverse("orcamentos:public_approve", args=[orcamento.link_token]))
+        self.assertEqual(response.status_code, 200)
+
+        job = Job.objects.get(orcamento=orcamento)
+        self.assertEqual(job.quantidade_fotos_incluidas, 12)
+        self.assertEqual(job.valor_foto_extra, 80)
+        self.assertEqual(job.status, Job.STATUS_CONTRATO_PENDENTE)

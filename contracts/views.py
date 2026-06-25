@@ -134,6 +134,8 @@ def modelo_delete_view(request, pk):
 def _build_variaveis_job(job):
     perfil = getattr(job.fotografo, "perfil", None)
     itens = job.orcamento.itens.select_related("servico").all()
+    quantidade_fotos = job.quantidade_fotos_incluidas or "nao definido"
+    valor_foto_extra = f"R$ {job.valor_foto_extra:.2f}"
     servicos_str = "\n".join([
         f"  • {i.descricao or (i.servico.nome if i.servico else '')}: R$ {i.valor:.2f}"
         for i in itens
@@ -146,6 +148,8 @@ def _build_variaveis_job(job):
         "{{servicos}}": servicos_str,
         "{{nome_fotografo}}": job.fotografo.email,
         "{{nome_empresa}}": perfil.nome_empresa if perfil else "",
+        "{{quantidade_fotos_incluidas}}": str(quantidade_fotos),
+        "{{valor_foto_extra}}": valor_foto_extra,
     }
 
 
@@ -156,6 +160,8 @@ def _build_contrato_conteudo(job):
         nome = item.servico.nome if item.servico else item.descricao
         linhas.append(f"  • {nome}: R$ {item.valor:.2f}")
     itens_str = "\n".join(linhas) if linhas else "  (sem itens)"
+    quantidade_fotos = job.quantidade_fotos_incluidas or "nao definido"
+    valor_foto_extra = f"R$ {job.valor_foto_extra:.2f}"
 
     data = timezone.localdate().strftime("%d de %B de %Y")
     return (
@@ -169,6 +175,12 @@ def _build_contrato_conteudo(job):
         f"SERVIÇOS CONTRATADOS:\n"
         f"{itens_str}\n\n"
         f"VALOR TOTAL: R$ {job.valor_total:.2f}\n\n"
+        f"SELECAO DE FOTOS E EXTRAS:\n"
+        f"  Fotos incluidas no pacote: {quantidade_fotos}\n"
+        f"  Valor por foto extra: {valor_foto_extra}\n"
+        f"  O cliente fara a selecao pelo portal da contratada. Quando houver grupo\n"
+        f"  de bracketing, a capa representa todas as fotos internas do grupo e\n"
+        f"  contabiliza como uma unica escolha para o limite contratado.\n\n"
         f"CONDIÇÕES GERAIS:\n"
         f"1. O pagamento será realizado conforme combinado entre as partes.\n"
         f"2. As fotografias serão entregues em formato digital.\n"

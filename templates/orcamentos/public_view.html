@@ -46,6 +46,20 @@
             </tfoot>
         </table>
 
+        <div class="mb-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+            <h2 class="mb-2 font-semibold text-slate-800">Selecao de fotos</h2>
+            <div class="grid gap-2 sm:grid-cols-2">
+                <div>
+                    <p class="text-xs text-slate-500">Fotos incluidas no pacote</p>
+                    <p class="font-medium text-slate-800">{{ orcamento.quantidade_fotos_incluidas|default:"Nao definido" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Valor por foto extra</p>
+                    <p class="font-medium text-slate-800">R$ {{ orcamento.valor_foto_extra|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+
         {% if orcamento.status == 'ENVIADO' %}
         <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
             <form method="post" action="{% url 'orcamentos:public_approve' orcamento.link_token %}" class="flex-1">
