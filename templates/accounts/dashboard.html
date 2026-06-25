@@ -1,23 +1,83 @@
-{% extends "base.html" %}
+{% extends "dashboard_base.html" %}
 
 {% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<h1 class="mb-2 text-2xl font-bold">Dashboard</h1>
-<p class="mb-6 text-sm text-slate-600">
-    Voce esta autenticado como
-    <span class="font-semibold">{{ request.user.email }}</span>.
-</p>
 
-<div class="rounded-md bg-slate-50 p-4 text-sm text-slate-700">
-    App de autenticacao pronto com login e cadastro por e-mail.
+<!-- Métricas -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Jobs ativos</p>
+        <p class="mt-2 text-3xl font-bold text-slate-900">{{ jobs_ativos }}</p>
+        <a href="{% url 'jobs:list' %}" class="mt-2 block text-xs text-blue-600 hover:underline">Ver pipeline →</a>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Orçamentos pendentes</p>
+        <p class="mt-2 text-3xl font-bold text-slate-900">{{ orcamentos_pendentes }}</p>
+        <a href="{% url 'orcamentos:list' %}" class="mt-2 block text-xs text-blue-600 hover:underline">Ver orçamentos →</a>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Receita este mês</p>
+        <p class="mt-2 text-3xl font-bold text-slate-900">R$ {{ receita_mes|floatformat:2 }}</p>
+        <p class="mt-2 text-xs text-slate-400">pagamentos confirmados</p>
+    </div>
 </div>
 
-<a
-    href="{% url 'accounts:logout' %}"
-    class="mt-6 inline-block rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
->
-    Sair
-</a>
-{% endblock %}
+<!-- Ações rápidas -->
+<div class="flex flex-wrap gap-3 mb-8">
+    <a href="{% url 'orcamentos:create' %}"
+       class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Novo orçamento
+    </a>
+    <a href="{% url 'clients:create' %}"
+       class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Novo cliente
+    </a>
+    <a href="{% url 'jobs:list' %}"
+       class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        Ver pipeline de jobs
+    </a>
+</div>
 
+<!-- Jobs recentes -->
+<div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="px-6 py-4 border-b border-slate-200">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Jobs recentes</h2>
+    </div>
+    {% if jobs_recentes %}
+    <div class="divide-y divide-slate-100">
+        {% for job in jobs_recentes %}
+        <a href="{% url 'jobs:detail' job.pk %}"
+           class="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
+            <div>
+                <p class="text-sm font-medium text-slate-900">{{ job.titulo|default:"Job sem título" }}</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ job.cliente.nome }} · {{ job.created_at|date:"d/m/Y" }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-slate-700">R$ {{ job.valor_total|floatformat:2 }}</span>
+                <span class="rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600">
+                    {{ job.get_status_display }}
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-6 py-10 text-center">
+        <p class="text-sm text-slate-400">Nenhum job ainda. Comece criando um orçamento.</p>
+        <a href="{% url 'orcamentos:create' %}"
+           class="mt-3 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+            Criar primeiro orçamento
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

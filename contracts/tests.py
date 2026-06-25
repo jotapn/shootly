@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from clients.models import Cliente
 from contracts.models import Contrato
+from contracts.views import _build_contrato_conteudo
 from jobs.models import Job
 from orcamentos.models import Orcamento
 
@@ -75,3 +76,15 @@ class ContratoModelTests(TestCase):
         contrato.assinar(nome="Segunda pessoa", cpf="222", ip="2.2.2.2")
         self.assertEqual(contrato.assinatura_nome, "Segunda pessoa")
         self.assertEqual(contrato.hash_documento, primeiro_hash)
+
+    def test_contrato_gerado_inclui_termos_de_selecao_e_extras(self):
+        job = self._criar_job()
+        job.quantidade_fotos_incluidas = 8
+        job.valor_foto_extra = 120
+        job.save(update_fields=["quantidade_fotos_incluidas", "valor_foto_extra"])
+
+        conteudo = _build_contrato_conteudo(job)
+
+        self.assertIn("Fotos incluidas no pacote: 8", conteudo)
+        self.assertIn("Valor por foto extra: R$ 120.00", conteudo)
+        self.assertIn("bracketing", conteudo)

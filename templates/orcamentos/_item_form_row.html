@@ -1,0 +1,25 @@
+<tr class="item-row border-b border-slate-100">
+    <td class="px-3 py-2">
+        {{ form.servico.as_widget }}
+        {% if form.servico.errors %}<p class="text-xs text-red-600 mt-1">{{ form.servico.errors.0 }}</p>{% endif %}
+    </td>
+    <td class="px-3 py-2">
+        {{ form.descricao.as_widget }}
+        {% if form.descricao.errors %}<p class="text-xs text-red-600 mt-1">{{ form.descricao.errors.0 }}</p>{% endif %}
+    </td>
+    <td class="px-3 py-2">
+        {{ form.valor.as_widget }}
+        {% if form.valor.errors %}<p class="text-xs text-red-600 mt-1">{{ form.valor.errors.0 }}</p>{% endif %}
+    </td>
+    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+    <td class="px-3 py-2 text-center">
+        <div class="hidden">{{ form.DELETE }}</div>
+        <button type="button"
+                onclick="removeItemRow(this)"
+                class="text-slate-400 hover:text-red-500 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </td>
+</tr>

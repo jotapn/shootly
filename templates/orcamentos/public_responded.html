@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obrigado — Shootly</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 flex items-center justify-center p-6">
+<div class="mx-auto max-w-md text-center">
+    <div class="rounded-xl border border-slate-200 bg-white p-10 shadow-sm">
+        {% if aprovado %}
+        <div class="flex justify-center mb-4">
+            <div class="rounded-full bg-green-100 p-4">
+                <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900 mb-2">Orçamento aprovado!</h1>
+        <p class="text-slate-500 text-sm">
+            Obrigado, {{ orcamento.cliente.nome }}. Seu orçamento foi aprovado com sucesso.
+            Em breve você receberá o contrato para assinatura.
+        </p>
+        {% else %}
+        <div class="flex justify-center mb-4">
+            <div class="rounded-full bg-slate-100 p-4">
+                <svg class="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900 mb-2">Orçamento recusado</h1>
+        <p class="text-slate-500 text-sm">
+            Entendemos, {{ orcamento.cliente.nome }}. Sua resposta foi registrada.
+        </p>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

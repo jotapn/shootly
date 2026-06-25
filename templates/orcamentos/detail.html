@@ -1,0 +1,129 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Orçamento #{{ orcamento.pk }}{% endblock %}
+{% block page_title %}Orçamento — {{ orcamento.cliente.nome }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap items-center gap-3 mb-6">
+    <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium
+        {% if orcamento.status == 'RASCUNHO' %}bg-slate-100 text-slate-700
+        {% elif orcamento.status == 'ENVIADO' %}bg-blue-100 text-blue-700
+        {% elif orcamento.status == 'APROVADO' %}bg-green-100 text-green-700
+        {% else %}bg-red-100 text-red-700{% endif %}">
+        {{ orcamento.get_status_display }}
+    </span>
+    {% if orcamento.status == 'RASCUNHO' %}
+    <a href="{% url 'orcamentos:edit' orcamento.pk %}"
+       class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+        Editar
+    </a>
+    <form method="post" action="{% url 'orcamentos:send' orcamento.pk %}" class="inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+            Enviar para cliente
+        </button>
+    </form>
+    {% endif %}
+    {% if orcamento.status == 'RECUSADO' %}
+    <a href="{% url 'orcamentos:edit' orcamento.pk %}"
+       class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors">
+        Fazer nova versão
+    </a>
+    {% endif %}
+    {% if orcamento.status == 'ENVIADO' %}
+    <div class="flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-1.5 text-sm text-slate-600">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+        </svg>
+        <span class="font-mono text-xs break-all">{{ request.scheme }}://{{ request.get_host }}{% url 'orcamentos:public_view' orcamento.link_token %}</span>
+    </div>
+    {% endif %}
+    <a href="{% url 'orcamentos:delete' orcamento.pk %}"
+       class="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+        Excluir
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Info -->
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Informações</h2>
+        <dl class="space-y-3 text-sm">
+            <div>
+                <dt class="text-xs text-slate-400">Cliente</dt>
+                <dd class="font-medium text-slate-900">{{ orcamento.cliente.nome }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Criado em</dt>
+                <dd class="text-slate-700">{{ orcamento.created_at|date:"d/m/Y H:i" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Fotos incluidas</dt>
+                <dd class="text-slate-700">{{ orcamento.quantidade_fotos_incluidas|default:"Nao definido" }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs text-slate-400">Valor por foto extra</dt>
+                <dd class="text-slate-700">R$ {{ orcamento.valor_foto_extra|floatformat:2 }}</dd>
+            </div>
+            {% if orcamento.enviado_em %}
+            <div>
+                <dt class="text-xs text-slate-400">Enviado em</dt>
+                <dd class="text-slate-700">{{ orcamento.enviado_em|date:"d/m/Y H:i" }}</dd>
+            </div>
+            {% endif %}
+            {% if orcamento.respondido_em %}
+            <div>
+                <dt class="text-xs text-slate-400">Respondido em</dt>
+                <dd class="text-slate-700">{{ orcamento.respondido_em|date:"d/m/Y H:i" }}</dd>
+            </div>
+            {% endif %}
+            {% if orcamento.status == 'APROVADO' %}
+            <div>
+                <dt class="text-xs text-slate-400">Job gerado</dt>
+                <dd>
+                    {% if orcamento.job %}
+                    <a href="{% url 'jobs:detail' orcamento.job.pk %}" class="text-blue-600 hover:underline">
+                        Ver job →
+                    </a>
+                    {% else %}—{% endif %}
+                </dd>
+            </div>
+            {% endif %}
+        </dl>
+    </div>
+
+    <!-- Itens -->
+    <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="px-6 py-4 border-b border-slate-200">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Itens</h2>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                    <th class="text-left px-6 py-3 font-medium text-slate-500">Descrição</th>
+                    <th class="text-right px-6 py-3 font-medium text-slate-500">Valor</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for item in itens %}
+                <tr>
+                    <td class="px-6 py-3 text-slate-700">{{ item.descricao }}</td>
+                    <td class="px-6 py-3 text-right text-slate-700">R$ {{ item.valor|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="px-6 py-4 text-slate-400 text-center">Nenhum item</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="border-t-2 border-slate-200 bg-slate-50">
+                <tr>
+                    <td class="px-6 py-3 font-semibold text-slate-700">Total</td>
+                    <td class="px-6 py-3 text-right font-bold text-slate-900">R$ {{ orcamento.valor_total|floatformat:2 }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

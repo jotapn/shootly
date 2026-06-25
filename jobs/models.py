@@ -48,6 +48,9 @@ class Job(models.Model):
         related_name="job",
     )
     titulo = models.CharField(max_length=150, blank=True)
+    data_producao = models.DateTimeField(null=True, blank=True)
+    quantidade_fotos_incluidas = models.PositiveIntegerField(null=True, blank=True)
+    valor_foto_extra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
@@ -80,6 +83,7 @@ class ArquivoFoto(models.Model):
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
     arquivo = models.FileField(upload_to=arquivo_foto_upload_path)
     thumbnail = models.ImageField(upload_to=arquivo_foto_upload_path, blank=True, null=True)
+    arquivo_protegido = models.ImageField(upload_to=arquivo_foto_upload_path, blank=True, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -1,0 +1,247 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Perfil da Empresa{% endblock %}
+{% block page_title %}Perfil da Empresa{% endblock %}
+
+{% block extra_head %}
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Raleway:wght@400;600;700&display=swap">
+{% endblock %}
+
+{% block content %}
+<p class="text-sm text-slate-500 mb-6">
+    Essas informações aparecem nos portais públicos enviados ao seu cliente (seleção de fotos e entrega).
+</p>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6"
+     x-data="{
+        corPrimaria:   '{{ perfil.cor_primaria|default:"#1d4ed8" }}',
+        corSecundaria: '{{ perfil.cor_secundaria|default:"#64748b" }}',
+        fonte:         '{{ perfil.fonte_titulo|default:"Inter" }}',
+        tema:          '{{ perfil.tema|default:"light" }}',
+        nomeEmpresa:   '{{ perfil.nome_empresa|default:""|escapejs }}',
+        logoUrl:       '{% if perfil.logo %}{{ perfil.logo.url }}{% endif %}',
+        temaLabel() {
+            if (this.tema === 'dark') return 'Dark';
+            if (this.tema === 'custom') return 'Custom';
+            return 'Light';
+        },
+        previewBg() {
+            if (this.tema === 'dark') return '#111827';
+            if (this.tema === 'custom') return this.corSecundaria + '1f';
+            return '#f8fafc';
+        },
+        previewText() {
+            return this.tema === 'dark' ? '#f9fafb' : '#111827';
+        },
+     }">
+
+    <!-- Formulário -->
+    <div class="xl:col-span-2">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+
+                <!-- Logo -->
+                {% if perfil.logo %}
+                <div class="flex items-center gap-4">
+                    <img src="{{ perfil.logo.url }}" alt="Logo atual"
+                         class="h-16 object-contain rounded-lg border border-slate-200 p-1">
+                    <span class="text-xs text-slate-400">Logo atual</span>
+                </div>
+                {% endif %}
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Logo da empresa</label>
+                    {{ form.logo }}
+                    <p class="mt-1 text-xs text-slate-400">PNG ou JPG. Recomendado: fundo transparente (PNG).</p>
+                    {% for e in form.logo.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nome da empresa</label>
+                    <input type="text" name="nome_empresa" value="{{ form.nome_empresa.value|default:'' }}"
+                           x-model="nomeEmpresa"
+                           class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-400 focus:ring">
+                    {% for e in form.nome_empresa.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+
+                <!-- Cores -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Cor principal</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" name="cor_primaria" x-model="corPrimaria"
+                                   value="{{ form.cor_primaria.value|default:'#1d4ed8' }}"
+                                   class="h-10 w-20 rounded cursor-pointer border border-slate-300">
+                            <span class="text-xs text-slate-500" x-text="corPrimaria"></span>
+                        </div>
+                        {% for e in form.cor_primaria.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Cor secundária</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" name="cor_secundaria" x-model="corSecundaria"
+                                   value="{{ form.cor_secundaria.value|default:'#64748b' }}"
+                                   class="h-10 w-20 rounded cursor-pointer border border-slate-300">
+                            <span class="text-xs text-slate-500" x-text="corSecundaria"></span>
+                        </div>
+                        {% for e in form.cor_secundaria.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                <!-- Fonte -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Fonte dos títulos</label>
+                    <select name="fonte_titulo" x-model="fonte"
+                            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-400 focus:ring">
+                        {% for val, label in form.fonte_titulo.field.choices %}
+                        <option value="{{ val }}" {% if form.fonte_titulo.value == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for e in form.fonte_titulo.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+
+                <!-- Tema -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tema do portal</label>
+                    <select name="tema" x-model="tema"
+                            class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-400 focus:ring">
+                        {% for val, label in form.tema.field.choices %}
+                        <option value="{{ val }}" {% if form.tema.value == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for e in form.tema.errors %}<p class="mt-1 text-xs text-red-600">{{ e }}</p>{% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-4 flex items-center gap-3">
+                <button type="submit"
+                        class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                    Salvar perfil
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Preview ao vivo -->
+    <div class="xl:col-span-1">
+        <div class="sticky top-6">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Preview do portal</p>
+
+            <!-- Frame de browser -->
+            <div class="rounded-xl overflow-hidden border border-slate-200 shadow-md">
+
+                <!-- Barra do browser -->
+                <div class="bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center gap-2">
+                    <div class="flex gap-1.5">
+                        <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <div class="flex-1 bg-white rounded text-xs text-slate-400 px-2 py-1 text-center truncate">
+                        shootly.com/p/selecao/...
+                    </div>
+                </div>
+
+                <!-- Conteúdo do portal -->
+                <div :style="`background:${previewBg()}`">
+
+                    <!-- Header do portal -->
+                    <div class="px-4 py-3 flex items-center gap-2.5"
+                         :style="`background:${corPrimaria}`">
+                        <template x-if="logoUrl">
+                            <img :src="logoUrl" class="h-6 w-auto object-contain" style="max-width:56px" alt="logo">
+                        </template>
+                        <span class="font-bold text-white text-sm truncate"
+                              :style="`font-family:'${fonte}',sans-serif`"
+                              x-text="nomeEmpresa || 'Minha Empresa'"></span>
+                    </div>
+
+                    <!-- Área de conteúdo -->
+                    <div class="p-3 space-y-3">
+
+                        <!-- Título -->
+                        <p class="text-sm font-bold"
+                           :style="`font-family:'${fonte}',sans-serif; color:${previewText()}`">
+                            Selecione suas fotos favoritas
+                        </p>
+                        <p class="text-[11px] leading-snug"
+                           :style="`color:${tema === 'dark' ? '#d1d5db' : '#64748b'}`">
+                            Clique na foto para ampliar. Use o <span class="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium" :style="`background:${tema === 'dark' ? '#374151' : '#f1f5f9'}; color:${tema === 'dark' ? '#d1d5db' : '#475569'}`">✓</span> para selecionar.
+                        </p>
+                        <div class="flex flex-wrap items-center gap-2 text-[10px]"
+                             :style="`color:${tema === 'dark' ? '#d1d5db' : '#64748b'}`">
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> Pacote</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span> Extra</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded border-2 border-red-400 inline-block"></span> Disponivel</span>
+                        </div>
+
+                        <!-- Grade de fotos simuladas -->
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <!-- Foto selecionada (1ª) -->
+                            <div class="aspect-square relative rounded-lg overflow-hidden flex items-center justify-center ring-4 ring-offset-1 ring-green-500"
+                                 :style="`background:${tema === 'dark' ? '#374151' : '#cbd5e1'}`">
+                                <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold rounded px-1">1</span>
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                     :style="`background:${corPrimaria}`">✓</div>
+                            </div>
+                            <!-- Fotos não selecionadas -->
+                            <div class="aspect-square relative rounded-lg overflow-hidden ring-4 ring-offset-1 ring-yellow-400"
+                                 :style="`background:${tema === 'dark' ? '#374151' : '#cbd5e1'}`">
+                                <div class="absolute inset-0 bg-yellow-400/20"></div>
+                                <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold rounded px-1">2</span>
+                                <span class="absolute top-1 right-1 bg-yellow-400 text-slate-800 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">+</span>
+                            </div>
+                            <div class="aspect-square relative rounded-lg overflow-hidden ring-2 ring-red-400"
+                                 :style="`background:${tema === 'dark' ? '#374151' : '#cbd5e1'}`">
+                                <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold rounded px-1">3</span>
+                            </div>
+                            <template x-for="j in [4,5,6]" :key="j">
+                                <div class="aspect-square relative rounded-lg border-2 border-transparent"
+                                     :style="`background:${tema === 'dark' ? '#374151' : '#cbd5e1'}`">
+                                    <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold rounded px-1" x-text="j"></span>
+                                    <span class="absolute bottom-1 right-1 rounded-lg px-1 text-[10px] shadow"
+                                          :style="`background:${tema === 'dark' ? '#111827cc' : '#ffffffd9'}; color:${tema === 'dark' ? '#d1d5db' : '#64748b'}`">✓</span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Rodapé com cor secundária -->
+                        <div class="-mx-3 mt-2 px-3 py-2 border-t shadow-sm flex items-center justify-between gap-2"
+                             :style="`background:${tema === 'dark' ? '#111827f2' : '#fffffff2'}; border-color:${corSecundaria}`">
+                            <span class="text-xs"
+                                  :style="`color:${tema === 'dark' ? '#d1d5db' : corSecundaria}`">
+                                <span x-text="temaLabel()"></span> · 2 selecionadas
+                            </span>
+                            <span class="text-[10px] flex items-center gap-1.5"
+                                  :style="`color:${tema === 'dark' ? '#9ca3af' : '#64748b'}`">
+                                <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span> 1 pacote
+                                <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> 1 extra
+                            </span>
+                            <button class="rounded px-2.5 py-1 text-xs font-semibold text-white"
+                                    :style="`background:${corPrimaria}`">
+                                Confirmar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amostra de fonte -->
+            <div class="mt-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-center">
+                <p class="text-xs text-slate-400 mb-1">Fonte selecionada</p>
+                <p class="text-lg font-semibold text-slate-800"
+                   :style="`font-family:'${fonte}',sans-serif`"
+                   x-text="fonte"></p>
+                <p class="text-sm text-slate-500"
+                   :style="`font-family:'${fonte}',sans-serif`">
+                    Título do portal · Subtítulo
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

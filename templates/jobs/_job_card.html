@@ -1,0 +1,65 @@
+<div id="job-card-{{ job.pk }}"
+     class="rounded-lg bg-white border border-slate-200 p-3 shadow-sm hover:border-blue-200 transition-colors">
+    <a href="{% url 'jobs:detail' job.pk %}"
+       class="block text-sm font-semibold text-slate-900 hover:text-blue-600 leading-snug">
+        {{ job.titulo|default:"Job sem título" }}
+    </a>
+    <p class="text-xs text-slate-500 mt-1">{{ job.cliente.nome }}</p>
+    <p class="text-xs font-medium text-slate-700 mt-1">R$ {{ job.valor_total|floatformat:2 }}</p>
+
+    <!-- Ações contextuais -->
+    <div class="mt-3 space-y-1.5">
+        {% if job.status == "CONTRATO_PENDENTE" %}
+        <a href="{% url 'contracts:generate' job.pk %}"
+           class="block w-full rounded-md bg-blue-50 border border-blue-200 px-2 py-1.5 text-center text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors">
+            Gerar Contrato
+        </a>
+        {% elif job.status == "CONTRATO_ASSINADO" %}
+        <button
+            hx-post="{% url 'jobs:status_update' job.pk %}"
+            hx-vals='{"new_status": "EM_PRODUCAO"}'
+            hx-target="#job-card-{{ job.pk }}"
+            hx-swap="outerHTML"
+            class="w-full rounded-md bg-blue-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors cursor-pointer">
+            Iniciar Produção
+        </button>
+        <a href="{% url 'deliveries:foto_upload' job.pk %}"
+           class="block w-full rounded-md bg-slate-50 border border-slate-200 px-2 py-1.5 text-center text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+            Upload de Fotos
+        </a>
+        {% elif job.status == "EM_PRODUCAO" %}
+        <a href="{% url 'deliveries:foto_upload' job.pk %}"
+           class="block w-full rounded-md bg-slate-50 border border-slate-200 px-2 py-1.5 text-center text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+            Upload de Fotos
+        </a>
+        {% elif job.status == "SELECAO_CONCLUIDA" %}
+        <button
+            hx-post="{% url 'jobs:status_update' job.pk %}"
+            hx-vals='{"new_status": "EM_EDICAO"}'
+            hx-target="#job-card-{{ job.pk }}"
+            hx-swap="outerHTML"
+            class="w-full rounded-md bg-blue-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors cursor-pointer">
+            Iniciar Edição
+        </button>
+        {% elif job.status == "EM_EDICAO" %}
+        <a href="{% url 'deliveries:portal_create' job.pk %}"
+           class="block w-full rounded-md bg-slate-50 border border-slate-200 px-2 py-1.5 text-center text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+            Criar Portal de Entrega
+        </a>
+        {% elif job.status == "AGUARDANDO_PAGAMENTO" %}
+        <a href="{% url 'payments:detail' job.pk %}"
+           class="block w-full rounded-md bg-green-50 border border-green-200 px-2 py-1.5 text-center text-xs font-medium text-green-700 hover:bg-green-100 transition-colors">
+            Ver Pagamento
+        </a>
+        {% elif job.status == "ENTREGUE" %}
+        <button
+            hx-post="{% url 'jobs:status_update' job.pk %}"
+            hx-vals='{"new_status": "CONCLUIDO"}'
+            hx-target="#job-card-{{ job.pk }}"
+            hx-swap="outerHTML"
+            class="w-full rounded-md bg-green-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors cursor-pointer">
+            Fechar Job
+        </button>
+        {% endif %}
+    </div>
+</div>

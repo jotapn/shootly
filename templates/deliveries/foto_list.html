@@ -1,0 +1,335 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Fotos - {{ job.titulo|default:"Job" }}{% endblock %}
+{% block page_title %}Fotos - {{ job.titulo|default:"Job sem titulo" }}{% endblock %}
+
+{% block extra_head %}
+<script>
+const FOTOS = [
+    {% for foto in fotos %}
+    {
+        src: "{% if foto.thumbnail %}{{ foto.thumbnail.url }}{% else %}{{ foto.arquivo.url }}{% endif %}",
+        name: "{{ foto.arquivo.name|truncatechars:40 }}",
+        tipo: "{{ foto.get_tipo_display }}",
+    },
+    {% endfor %}
+];
+
+let current = 0;
+
+function openLightbox(index) {
+    current = index;
+    render();
+    document.getElementById("lightbox").style.setProperty("display", "flex", "important");
+    document.body.style.overflow = "hidden";
+}
+
+function closeLightbox(e) {
+    if (e && e.target !== document.getElementById("lightbox")) return;
+    document.getElementById("lightbox").style.setProperty("display", "none", "important");
+    document.body.style.overflow = "";
+}
+
+function navigate(dir) {
+    if (!FOTOS.length) return;
+    current = (current + dir + FOTOS.length) % FOTOS.length;
+    render();
+}
+
+function render() {
+    const foto = FOTOS[current];
+    if (!foto) return;
+    const img = document.getElementById("lb-img");
+    img.src = foto.src;
+    img.alt = foto.name;
+    document.getElementById("lb-name").textContent = foto.name;
+    document.getElementById("lb-tipo").textContent = foto.tipo;
+    document.getElementById("lb-counter").textContent = (current + 1) + " / " + FOTOS.length;
+    document.getElementById("lb-prev").style.visibility = FOTOS.length > 1 ? "visible" : "hidden";
+    document.getElementById("lb-next").style.visibility = FOTOS.length > 1 ? "visible" : "hidden";
+}
+
+document.addEventListener("keydown", function(e) {
+    const lb = document.getElementById("lightbox");
+    if (!lb || lb.style.display === "none" || lb.style.display === "") return;
+    if (e.key === "Escape") closeLightbox();
+    if (e.key === "ArrowLeft") navigate(-1);
+    if (e.key === "ArrowRight") navigate(1);
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center gap-3">
+    <a href="{% url 'jobs:detail' job.pk %}"
+       class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
+        Voltar ao job
+    </a>
+    <a href="{% url 'deliveries:foto_upload' job.pk %}?tipo=BRUTA"
+       class="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        Upload de brutas
+    </a>
+    <a href="{% url 'deliveries:foto_upload' job.pk %}?tipo=EDITADA"
+       class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+        Upload de editadas
+    </a>
+
+    {% if pode_criar_selecao %}
+    <form method="post" action="{% url 'deliveries:selecao_create' job.pk %}" class="flex flex-wrap items-center gap-2">
+        {% csrf_token %}
+        <input type="number" name="max_fotos" min="1" placeholder="Limite de fotos (opcional)"
+               value="{{ job.quantidade_fotos_incluidas|default:'' }}"
+               class="w-52 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-blue-400 focus:ring">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700">
+            Criar selecao para cliente
+        </button>
+    </form>
+    {% endif %}
+
+    {% if tem_selecao %}
+    <span class="text-sm text-slate-500">Selecao: {{ job.selecao.get_status_display }}</span>
+    {% endif %}
+</div>
+
+<div class="space-y-8">
+    <section>
+        <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900">Brutas</h2>
+                <p class="text-sm text-slate-500">Arquivos usados na selecao do cliente.</p>
+            </div>
+            <span class="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-medium text-orange-700">
+                {{ fotos_brutas|length }} foto{{ fotos_brutas|length|pluralize }}
+            </span>
+        </div>
+
+        {% if grupos_bracketing %}
+        <div class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {% for grupo in grupos_bracketing %}
+            <div class="flex gap-3 rounded-lg border border-orange-200 bg-orange-50/60 p-3">
+                <div class="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-slate-100">
+                    {% if grupo.capa.thumbnail %}
+                    <img src="{{ grupo.capa.thumbnail.url }}" alt="{{ grupo.nome|default:'Grupo de bracketing' }}" class="h-full w-full object-cover">
+                    {% else %}
+                    <img src="{{ grupo.capa.arquivo.url }}" alt="{{ grupo.nome|default:'Grupo de bracketing' }}" class="h-full w-full object-cover">
+                    {% endif %}
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-800">{{ grupo.nome|default:"Grupo de bracketing" }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ grupo.fotos.count }} fotos internas, contabiliza como 1 escolha.</p>
+                    <p class="mt-1 truncate text-xs text-orange-700">Capa: {{ grupo.capa.arquivo.name|truncatechars:28 }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if fotos_brutas %}
+        <form id="bracketing-form" method="post" action="{% url 'deliveries:bracketing_create' job.pk %}"
+              class="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+            {% csrf_token %}
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-800">Agrupar bracketing</h3>
+                    <p class="mt-1 text-xs text-slate-500">Marque 2 ou mais brutas e escolha uma capa. O cliente vera so a capa e o grupo conta como 1 foto.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" name="nome" placeholder="Nome do grupo (opcional)"
+                           class="w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-orange-400 focus:ring">
+                    <button type="submit"
+                            class="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700">
+                        Agrupar bracketing
+                    </button>
+                </div>
+            </div>
+        </form>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {% for item in fotos_brutas %}
+            {% with foto=item.foto %}
+            <div class="group relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                {% if item.agrupada %}
+                <span class="absolute left-1.5 top-1.5 z-20 rounded-full bg-orange-600 px-2 py-1 text-[11px] font-semibold text-white shadow">
+                    Agrupada
+                </span>
+                {% else %}
+                <div class="absolute left-1.5 top-1.5 z-20 flex flex-col gap-1 rounded-md bg-white/95 p-1 text-[11px] shadow">
+                    <label class="flex items-center gap-1 text-slate-700">
+                        <input form="bracketing-form" type="checkbox" name="fotos" value="{{ foto.pk }}" class="h-3.5 w-3.5 rounded border-slate-300 text-orange-600">
+                        Grupo
+                    </label>
+                    <label class="flex items-center gap-1 text-slate-700">
+                        <input form="bracketing-form" type="radio" name="capa" value="{{ foto.pk }}" class="h-3.5 w-3.5 border-slate-300 text-orange-600">
+                        Capa
+                    </label>
+                </div>
+                {% endif %}
+                <button type="button"
+                        onclick="openLightbox({{ item.lightbox_index }})"
+                        class="block w-full focus:outline-none">
+                    {% if foto.thumbnail %}
+                    <img src="{{ foto.thumbnail.url }}" alt="{{ foto.arquivo.name }}" class="aspect-square w-full object-cover">
+                    {% else %}
+                    <img src="{{ foto.arquivo.url }}" alt="{{ foto.arquivo.name }}"
+                         class="aspect-square w-full object-cover"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="hidden aspect-square w-full items-center justify-center bg-slate-100">
+                        <svg class="h-8 w-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    {% endif %}
+                </button>
+
+                {% if not item.agrupada %}
+                    <form method="post" action="{% url 'deliveries:foto_delete' foto.pk %}"
+                          onsubmit="return confirm('Remover esta foto?')"
+                          class="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        {% csrf_token %}
+                        <button type="submit" class="rounded-full bg-red-600 p-1 text-white shadow transition-colors hover:bg-red-700">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </form>
+                {% endif %}
+
+                <div class="px-2 py-1.5">
+                    <p class="truncate text-xs text-slate-500" title="{{ foto.arquivo.name }}">
+                        {{ foto.arquivo.name|truncatechars:20 }}
+                    </p>
+                    <span class="mt-0.5 inline-block rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700">
+                        {{ foto.get_tipo_display }}
+                    </span>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="rounded-xl border-2 border-dashed border-orange-200 bg-orange-50/40 px-6 py-10 text-center">
+            <p class="font-medium text-slate-600">Nenhuma foto bruta enviada ainda.</p>
+            <a href="{% url 'deliveries:foto_upload' job.pk %}?tipo=BRUTA"
+               class="mt-4 inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700">
+                Upload de brutas
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <section>
+        <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900">Editadas</h2>
+                <p class="text-sm text-slate-500">Arquivos finais liberados no portal de entrega.</p>
+            </div>
+            <span class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
+                {{ fotos_editadas|length }} foto{{ fotos_editadas|length|pluralize }}
+            </span>
+        </div>
+
+        {% if fotos_editadas %}
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {% for item in fotos_editadas %}
+            {% with foto=item.foto %}
+            <div class="group relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                <button type="button"
+                        onclick="openLightbox({{ item.lightbox_index }})"
+                        class="block w-full focus:outline-none">
+                    {% if foto.thumbnail %}
+                    <img src="{{ foto.thumbnail.url }}" alt="{{ foto.arquivo.name }}" class="aspect-square w-full object-cover">
+                    {% else %}
+                    <img src="{{ foto.arquivo.url }}" alt="{{ foto.arquivo.name }}"
+                         class="aspect-square w-full object-cover"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="hidden aspect-square w-full items-center justify-center bg-slate-100">
+                        <svg class="h-8 w-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    {% endif %}
+                </button>
+
+                <form method="post" action="{% url 'deliveries:foto_delete' foto.pk %}"
+                      onsubmit="return confirm('Remover esta foto?')"
+                      class="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    {% csrf_token %}
+                    <button type="submit" class="rounded-full bg-red-600 p-1 text-white shadow transition-colors hover:bg-red-700">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </form>
+
+                <div class="px-2 py-1.5">
+                    <p class="truncate text-xs text-slate-500" title="{{ foto.arquivo.name }}">
+                        {{ foto.arquivo.name|truncatechars:20 }}
+                    </p>
+                    <span class="mt-0.5 inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                        {{ foto.get_tipo_display }}
+                    </span>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 px-6 py-10 text-center">
+            <p class="font-medium text-slate-600">Nenhuma foto editada enviada ainda.</p>
+            <a href="{% url 'deliveries:foto_upload' job.pk %}?tipo=EDITADA"
+               class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700">
+                Upload de editadas
+            </a>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<div id="lightbox"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+     style="display:none !important"
+     onclick="closeLightbox(event)">
+    <button onclick="closeLightbox()"
+            class="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+    </button>
+
+    <button id="lb-prev"
+            onclick="event.stopPropagation(); navigate(-1)"
+            class="absolute left-4 z-10 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+    </button>
+
+    <div class="flex max-h-screen max-w-5xl flex-col items-center px-20" onclick="event.stopPropagation()">
+        <img id="lb-img" src="" alt="" class="max-h-[80vh] max-w-full rounded-lg object-contain shadow-2xl">
+        <div class="mt-3 flex items-center gap-3">
+            <p id="lb-name" class="text-sm text-white/70"></p>
+            <span id="lb-tipo" class="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/80"></span>
+            <span id="lb-counter" class="text-xs text-white/40"></span>
+        </div>
+    </div>
+
+    <button id="lb-next"
+            onclick="event.stopPropagation(); navigate(1)"
+            class="absolute right-4 z-10 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+    </button>
+</div>
+
+{% endblock %}

@@ -45,6 +45,8 @@ class Orcamento(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RASCUNHO)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    quantidade_fotos_incluidas = models.PositiveIntegerField(null=True, blank=True)
+    valor_foto_extra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     link_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     enviado_em = models.DateTimeField(null=True, blank=True)
     respondido_em = models.DateTimeField(null=True, blank=True)

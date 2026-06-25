@@ -12,8 +12,10 @@ from django.utils import timezone
 
 from plans.models import UserPlan
 
-from .forms import LoginForm, RegisterForm
-from .models import User
+from deliveries.models import ConfiguracaoMarcaDagua
+
+from .forms import LoginForm, MarcaDaguaForm, PerfilFotografoForm, RegisterForm
+from .models import PerfilFotografo, User
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -44,7 +46,50 @@ def register_view(request):
 
 @login_required
 def dashboard_view(request):
-    return render(request, "accounts/dashboard.html")
+    from django.db.models import Q
+    from jobs.models import Job
+    from orcamentos.models import Orcamento
+    from payments.models import Pagamento
+
+    user = request.user
+    now = timezone.now()
+    inicio_mes = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    jobs_ativos = Job.objects.filter(
+        fotografo=user,
+    ).exclude(status=Job.STATUS_CONCLUIDO).count()
+
+    jobs_recentes = (
+        Job.objects.filter(fotografo=user)
+        .select_related("cliente")
+        .order_by("-created_at")[:5]
+    )
+
+    orcamentos_pendentes = Orcamento.objects.filter(
+        fotografo=user,
+        status__in=[Orcamento.STATUS_RASCUNHO, Orcamento.STATUS_ENVIADO],
+    ).count()
+
+    receita_mes = (
+        Pagamento.objects.filter(
+            job__fotografo=user,
+            status=Pagamento.STATUS_CONFIRMADO,
+            confirmado_em__gte=inicio_mes,
+        ).aggregate(
+            total=Coalesce(
+                Sum("valor"),
+                Value(0, output_field=DecimalField(max_digits=10, decimal_places=2)),
+            )
+        )["total"]
+    )
+
+    context = {
+        "jobs_ativos": jobs_ativos,
+        "orcamentos_pendentes": orcamentos_pendentes,
+        "receita_mes": receita_mes,
+        "jobs_recentes": jobs_recentes,
+    }
+    return render(request, "accounts/dashboard.html", context)
 
 
 @login_required
@@ -179,4 +224,32 @@ def logout_view(request):
         logout(request)
         messages.info(request, "Voce saiu da sua conta.")
     return redirect("accounts:login")
+
+
+@login_required
+def perfil_view(request):
+    perfil, _ = PerfilFotografo.objects.get_or_create(fotografo=request.user)
+    form = PerfilFotografoForm(request.POST or None, request.FILES or None, instance=perfil)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Perfil atualizado com sucesso.")
+        return redirect("accounts:perfil")
+    return render(request, "accounts/perfil.html", {"form": form, "perfil": perfil})
+
+
+@login_required
+def marca_dagua_view(request):
+    config = getattr(request.user, "marca_dagua", None)
+    form = MarcaDaguaForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=config,
+    )
+    if request.method == "POST" and form.is_valid():
+        obj = form.save(commit=False)
+        obj.fotografo = request.user
+        obj.save()
+        messages.success(request, "Configuração de marca d'água salva.")
+        return redirect("accounts:marca_dagua")
+    return render(request, "accounts/marca_dagua.html", {"form": form, "config": config})
 

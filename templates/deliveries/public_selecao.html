@@ -1,0 +1,330 @@
+{% extends "base_publica.html" %}
+
+{% block title %}Selecao de Fotos{% endblock %}
+
+{% block extra_head %}
+<script>
+window.__ITENS__ = [
+    {% for item in itens %}
+    {% with foto=item.capa %}
+    {
+        "id": {{ item.id }},
+        "src": "{% if foto.arquivo_protegido %}{{ foto.arquivo_protegido.url }}{% elif foto.thumbnail %}{{ foto.thumbnail.url }}{% else %}{{ foto.arquivo.url }}{% endif %}",
+        "num": {{ forloop.counter }},
+        "grupo": {% if item.is_grupo %}true{% else %}false{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endwith %}
+    {% endfor %}
+];
+</script>
+{% endblock %}
+
+{% block content %}
+
+{% if selecao.status == "CONCLUIDA" %}
+<section class="mx-auto flex max-w-xl flex-col items-center justify-center py-20 text-center">
+    <div class="mb-6 rounded-full bg-green-100 p-5">
+        <svg class="h-14 w-14 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+    </div>
+    <h1 class="font-titulo text-2xl font-bold text-slate-900">Selecao concluida</h1>
+    <p class="mt-2 text-sm leading-6 text-slate-500">
+        Sua selecao ja foi enviada. Aguarde o contato do fotografo para as proximas etapas.
+    </p>
+</section>
+
+{% else %}
+
+<div
+    x-data="{
+        itens: window.__ITENS__ || [],
+        selecionados: [],
+        max: {{ selecao.max_fotos|default:'null' }},
+        valorExtra: {{ valor_foto_extra_js|default:'0' }},
+        lb: false,
+        lbIdx: 0,
+
+        get foto() { return this.itens[this.lbIdx] || null; },
+        get totalExtras() { return this.max === null ? 0 : Math.max(0, this.selecionados.length - this.max); },
+        get totalPacote() { return this.max === null ? this.selecionados.length : Math.min(this.selecionados.length, this.max); },
+        get faltam() { return this.max === null ? null : Math.max(0, this.max - this.totalPacote); },
+        get valorExtrasTotal() { return this.totalExtras * this.valorExtra; },
+        dinheiro(valor) { return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
+
+        toggle(id) {
+            const i = this.selecionados.indexOf(id);
+            if (i >= 0) this.selecionados.splice(i, 1);
+            else this.selecionados.push(id);
+        },
+        isSel(id) { return this.selecionados.includes(id); },
+        indice(id) { return this.selecionados.indexOf(id); },
+        dentroLimite(id) {
+            if (!this.isSel(id)) return false;
+            return this.max === null || this.indice(id) < this.max;
+        },
+        eExtra(id) {
+            if (!this.isSel(id) || this.max === null) return false;
+            return this.indice(id) >= this.max;
+        },
+        limiteAtingido() {
+            return this.max !== null && this.selecionados.length >= this.max;
+        },
+        podeSalvar() {
+            return this.selecionados.length > 0;
+        },
+        abrirLb(idx, event) {
+            event.stopPropagation();
+            this.lbIdx = idx;
+            this.lb = true;
+            document.body.style.overflow = 'hidden';
+        },
+        fecharLb() {
+            this.lb = false;
+            document.body.style.overflow = '';
+        },
+        navLb(dir) {
+            if (!this.itens.length) return;
+            this.lbIdx = (this.lbIdx + dir + this.itens.length) % this.itens.length;
+        }
+    }"
+    @keydown.window="
+        if (!lb) return;
+        if ($event.key === 'Escape') { $event.preventDefault(); fecharLb(); }
+        if ($event.key === 'ArrowLeft') { $event.preventDefault(); navLb(-1); }
+        if ($event.key === 'ArrowRight') { $event.preventDefault(); navLb(1); }
+        if (($event.key === ' ' || $event.key === 'Enter') && foto) {
+            $event.preventDefault();
+            toggle(foto.id);
+        }
+    "
+    class="pb-40"
+>
+    <section class="mb-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-secundaria">Portal de selecao</p>
+                <h1 class="font-titulo mt-1 text-2xl font-bold text-slate-900 md:text-3xl">
+                    Escolha suas fotos favoritas
+                </h1>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                    Toque em uma foto para ampliar. Algumas capas podem representar um grupo de bracketing e contam como uma unica escolha.
+                    {% if selecao.max_fotos %}
+                    Seu pacote inclui <strong>{{ selecao.max_fotos }}</strong> foto{{ selecao.max_fotos|pluralize }}; escolhas acima disso ficam como extras.
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm md:min-w-56">
+                <div class="text-xs font-medium text-slate-500">Selecionadas</div>
+                <div class="mt-1 flex items-end gap-2">
+                    <span class="text-3xl font-bold tabular-nums text-primaria" x-text="selecionados.length"></span>
+                    {% if selecao.max_fotos %}
+                    <span class="pb-1 text-sm text-slate-500">de {{ selecao.max_fotos }} no pacote</span>
+                    {% else %}
+                    <span class="pb-1 text-sm text-slate-500">foto<span x-show="selecionados.length !== 1">s</span></span>
+                    {% endif %}
+                </div>
+                {% if selecao.max_fotos %}
+                <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full bg-primaria transition-all"
+                         :style="`width:${max ? Math.min(100, (totalPacote / max) * 100) : 0}%`"></div>
+                </div>
+                <p x-show="totalExtras > 0 && valorExtra > 0" class="mt-2 text-xs font-medium text-yellow-700">
+                    Extras estimados: <span x-text="dinheiro(valorExtrasTotal)"></span>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {% for item in itens %}
+        {% with foto=item.capa %}
+        <article
+            class="group relative aspect-square overflow-hidden rounded-lg bg-slate-200 shadow-sm transition duration-150"
+            :class="{
+                'ring-4 ring-green-500 ring-offset-2': dentroLimite({{ item.id }}),
+                'ring-4 ring-yellow-400 ring-offset-2': eExtra({{ item.id }}),
+                'ring-2 ring-red-400': !isSel({{ item.id }}) && limiteAtingido(),
+            }"
+        >
+            <button
+                type="button"
+                class="absolute inset-0 z-0 h-full w-full cursor-zoom-in focus:outline-none focus:ring-4 focus:ring-primaria"
+                @click="abrirLb({{ forloop.counter0 }}, $event)"
+                aria-label="Ampliar foto {{ forloop.counter }}"
+            >
+                {% if foto.arquivo_protegido %}
+                <img src="{{ foto.arquivo_protegido.url }}" alt="Foto {{ forloop.counter }}" class="h-full w-full object-cover transition duration-200 group-hover:scale-105" draggable="false">
+                {% elif foto.thumbnail %}
+                <img src="{{ foto.thumbnail.url }}" alt="Foto {{ forloop.counter }}" class="h-full w-full object-cover transition duration-200 group-hover:scale-105" draggable="false">
+                {% else %}
+                <img src="{{ foto.arquivo.url }}" alt="Foto {{ forloop.counter }}" class="h-full w-full object-cover transition duration-200 group-hover:scale-105" draggable="false" onerror="this.style.display='none'">
+                {% endif %}
+            </button>
+
+            <div x-show="eExtra({{ item.id }})" class="pointer-events-none absolute inset-0 z-10 bg-yellow-400/20"></div>
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+            <span class="pointer-events-none absolute bottom-2 left-2 z-20 rounded bg-black/65 px-2 py-1 text-xs font-bold text-white">
+                {{ forloop.counter }}
+            </span>
+
+            {% if item.is_grupo %}
+            <span class="pointer-events-none absolute left-2 top-2 z-20 rounded-full bg-black/65 px-2 py-1 text-[11px] font-semibold text-white">
+                Grupo
+            </span>
+            {% endif %}
+
+            <span
+                x-show="dentroLimite({{ item.id }})"
+                class="pointer-events-none absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-sm font-bold text-white shadow"
+            >OK</span>
+            <span
+                x-show="eExtra({{ item.id }})"
+                class="pointer-events-none absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-yellow-400 text-sm font-bold text-slate-900 shadow"
+            >+</span>
+
+            <button
+                type="button"
+                @click.stop="toggle({{ item.id }})"
+                class="absolute bottom-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition duration-150 md:opacity-0 md:group-hover:opacity-100"
+                :class="{
+                    'bg-green-500 text-white opacity-100': dentroLimite({{ item.id }}),
+                    'bg-yellow-400 text-slate-900 opacity-100': eExtra({{ item.id }}),
+                    'bg-white/95 text-slate-700 hover:bg-white opacity-100 md:opacity-0': !isSel({{ item.id }}),
+                }"
+                aria-label="Selecionar foto {{ forloop.counter }}"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+            </button>
+        </article>
+        {% endwith %}
+        {% empty %}
+        <div class="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+            <p class="text-sm text-slate-500">Nenhuma foto disponivel para selecao.</p>
+        </div>
+        {% endfor %}
+    </section>
+
+    <div
+        x-show="lb"
+        x-transition
+        class="fixed inset-0 z-50 flex flex-col bg-black/95"
+        style="display:none"
+        @click.self="fecharLb()"
+    >
+        <div class="flex shrink-0 items-center justify-between px-4 py-3">
+            <span class="text-sm tabular-nums text-white/60" x-text="(lbIdx + 1) + ' / ' + itens.length"></span>
+            <button type="button" @click="fecharLb()" class="rounded-full bg-white/10 p-2 transition hover:bg-white/20" aria-label="Fechar">
+                <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="relative flex min-h-0 flex-1 items-center justify-center px-3">
+            <button type="button" @click.stop="navLb(-1)" x-show="itens.length > 1" class="absolute left-3 z-10 rounded-full bg-white/10 p-3 transition hover:bg-white/25" aria-label="Foto anterior">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+
+            <template x-if="foto">
+                <img :src="foto.src" :key="lbIdx" class="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl" draggable="false" oncontextmenu="return false">
+            </template>
+
+            <button type="button" @click.stop="navLb(1)" x-show="itens.length > 1" class="absolute right-3 z-10 rounded-full bg-white/10 p-3 transition hover:bg-white/25" aria-label="Proxima foto">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="shrink-0 px-4 py-5">
+            <template x-if="foto">
+                <div class="flex flex-col items-center gap-3">
+                    <p x-show="!isSel(foto.id) && limiteAtingido()" class="text-xs font-medium text-yellow-300">
+                        Esta foto sera marcada como extra.
+                    </p>
+                    <button
+                        type="button"
+                        @click.stop="toggle(foto.id)"
+                        class="flex items-center gap-2.5 rounded-full px-8 py-3 text-sm font-semibold transition"
+                        :class="{
+                            'bg-green-500 text-white ring-4 ring-green-400/30': dentroLimite(foto.id),
+                            'bg-yellow-400 text-slate-900 ring-4 ring-yellow-400/30': eExtra(foto.id),
+                            'border border-white/20 bg-white/15 text-white hover:bg-white/25': !isSel(foto.id),
+                        }"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span x-text="dentroLimite(foto.id) ? 'Selecionada no pacote' : eExtra(foto.id) ? 'Selecionada como extra' : 'Selecionar foto'"></span>
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur">
+        <form
+            method="post"
+            action="{% url 'deliveries:public_selecao_confirm' selecao.link_token %}"
+            x-ref="form"
+            @submit.prevent="
+                if (!podeSalvar()) return;
+                let msg = 'Confirmar selecao de ' + selecionados.length + ' item(ns)?';
+                if (totalExtras > 0) msg += '\n\n' + totalPacote + ' dentro do pacote + ' + totalExtras + ' extra(s).';
+                if (totalExtras > 0 && valorExtra > 0) msg += '\nValor estimado dos extras: ' + dinheiro(valorExtrasTotal) + '.';
+                msg += '\n\nEsta acao nao pode ser desfeita.';
+                if (!confirm(msg)) return;
+                $refs.form.submit();
+            "
+        >
+            {% csrf_token %}
+            <template x-for="id in selecionados" :key="id">
+                <input type="hidden" name="selecionados" :value="id">
+            </template>
+
+            <div class="mx-auto flex max-w-5xl items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <div class="text-sm text-slate-600">
+                        <span class="text-2xl font-bold tabular-nums text-primaria" x-text="selecionados.length"></span>
+                        <span class="ml-1">item<span x-show="selecionados.length !== 1">s</span> selecionado<span x-show="selecionados.length !== 1">s</span></span>
+                    </div>
+                    {% if selecao.max_fotos %}
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span><span x-text="totalPacote"></span> no pacote</span>
+                        <template x-if="totalExtras > 0">
+                            <span class="font-medium text-yellow-600">
+                                <span x-text="totalExtras"></span> extra<span x-show="totalExtras !== 1">s</span>
+                                <span x-show="valorExtra > 0">(<span x-text="dinheiro(valorExtrasTotal)"></span>)</span>
+                            </span>
+                        </template>
+                        <template x-if="faltam > 0">
+                            <span class="text-slate-400">Faltam <span x-text="faltam"></span></span>
+                        </template>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <button
+                    type="submit"
+                    :disabled="!podeSalvar()"
+                    :class="podeSalvar() ? 'opacity-100 hover:opacity-90' : 'cursor-not-allowed opacity-40'"
+                    class="rounded-xl bg-primaria px-5 py-3 text-sm font-semibold text-white transition sm:px-6"
+                    style="background-color: var(--cor-primaria) !important;"
+                >
+                    Confirmar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
